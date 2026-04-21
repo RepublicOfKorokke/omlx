@@ -108,7 +108,9 @@ class TieredCacheManager:
             return None
 
         if not paged_ssd_cache_dir:
-            logger.debug("Paged paged SSD cache not configured (no --paged-ssd-cache-dir specified)")
+            logger.debug(
+                "Paged paged SSD cache not configured (no --paged-ssd-cache-dir specified)"
+            )
             return None
 
         try:

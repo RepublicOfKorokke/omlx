@@ -150,7 +150,10 @@ class TestExtractGemma4Messages:
                 role="user",
                 content=[
                     {"type": "text", "text": "describe"},
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
                 ],
             ),
         ]
@@ -182,7 +185,10 @@ class TestExtractGemma4Messages:
                 role="user",
                 content=[
                     {"type": "text", "text": "Look at this"},
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
                 ],
             ),
             Message(role="user", content="What is it?"),

@@ -34,14 +34,16 @@ class MathQABenchmark(BaseBenchmark):
             labels = item.get("labels", [])
             if not choices or not labels:
                 continue
-            normalized.append({
-                "id": item.get("id", ""),
-                "question": item["question"],
-                "choices": choices,
-                "labels": labels,
-                "answer": item["answer"],
-                "category": item.get("category", "general"),
-            })
+            normalized.append(
+                {
+                    "id": item.get("id", ""),
+                    "question": item["question"],
+                    "choices": choices,
+                    "labels": labels,
+                    "answer": item["answer"],
+                    "category": item.get("category", "general"),
+                }
+            )
 
         logger.info(f"MathQA: loaded {len(normalized)} questions")
 
@@ -57,8 +59,7 @@ class MathQABenchmark(BaseBenchmark):
         labels = item["labels"]
 
         parts = [
-            "Solve the following math problem. "
-            "Answer with just the letter.\n",
+            "Solve the following math problem. Answer with just the letter.\n",
             f"Problem: {question}\n",
         ]
         for label, choice in zip(labels, choices):

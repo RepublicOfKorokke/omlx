@@ -51,9 +51,9 @@ def test_model(model_path: str, ssd_dir: Optional[str] = None) -> bool:
     from omlx.engine.vlm import _patch_gemma4_vision_tower, _patch_video_processor_bug
     from omlx.utils.image import compute_image_hash
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Testing: {model_path}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # ── Step 1: Load model ──────────────────────────────────────
     print("\n[1/6] Loading model...")
@@ -83,9 +83,7 @@ def test_model(model_path: str, ssd_dir: Optional[str] = None) -> bool:
 
     messages = [{"role": "user", "content": "Describe this image."}]
     try:
-        prompt = vlm_apply_template(
-            processor, vlm_model.config, messages, num_images=1
-        )
+        prompt = vlm_apply_template(processor, vlm_model.config, messages, num_images=1)
     except Exception:
         # Fallback: try tokenizer directly
         try:
@@ -95,14 +93,13 @@ def test_model(model_path: str, ssd_dir: Optional[str] = None) -> bool:
         except Exception:
             prompt = "Describe this image."
 
-    inputs = prepare_inputs(
-        processor, images=[test_image], prompts=[prompt]
-    )
+    inputs = prepare_inputs(processor, images=[test_image], prompts=[prompt])
     input_ids = inputs["input_ids"]
     pixel_values = inputs.get("pixel_values")
     attention_mask = inputs.get("attention_mask")
     extra_model_inputs = {
-        k: v for k, v in inputs.items()
+        k: v
+        for k, v in inputs.items()
         if k not in ("input_ids", "attention_mask", "pixel_values") and v is not None
     }
 
@@ -140,14 +137,16 @@ def test_model(model_path: str, ssd_dir: Optional[str] = None) -> bool:
         )
         mx.eval(embed.inputs_embeds)
         print(f"  Full pipeline OK: inputs_embeds shape={embed.inputs_embeds.shape}")
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"RESULT: PASS (fallback mode — no vision cache for {model_type})")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         return True
 
-    feat_shape = features.shape if isinstance(features, mx.array) else f"list[{len(features)}]"
+    feat_shape = (
+        features.shape if isinstance(features, mx.array) else f"list[{len(features)}]"
+    )
     print(f"  features shape: {feat_shape}")
-    print(f"  compute time: {t_compute*1000:.1f}ms")
+    print(f"  compute time: {t_compute * 1000:.1f}ms")
 
     # ── Step 4: Test cached_image_features support ───────────────
     print("\n[4/6] Testing cached_image_features kwarg...")
@@ -158,12 +157,14 @@ def test_model(model_path: str, ssd_dir: Optional[str] = None) -> bool:
             input_ids, pixel_values, mask=attention_mask, **call_kwargs
         )
         mx.eval(embed_cached.inputs_embeds)
-        print(f"  cached path OK: inputs_embeds shape={embed_cached.inputs_embeds.shape}")
+        print(
+            f"  cached path OK: inputs_embeds shape={embed_cached.inputs_embeds.shape}"
+        )
     except TypeError as e:
         print(f"  FAIL: cached_image_features not supported: {e}")
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"RESULT: PARTIAL — _compute works but cached kwarg rejected")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         return False
 
     # Compare with fresh computation
@@ -173,8 +174,12 @@ def test_model(model_path: str, ssd_dir: Optional[str] = None) -> bool:
     )
     mx.eval(embed_fresh.inputs_embeds)
 
-    max_diff = mx.max(mx.abs(embed_cached.inputs_embeds - embed_fresh.inputs_embeds)).item()
-    mean_diff = mx.mean(mx.abs(embed_cached.inputs_embeds - embed_fresh.inputs_embeds)).item()
+    max_diff = mx.max(
+        mx.abs(embed_cached.inputs_embeds - embed_fresh.inputs_embeds)
+    ).item()
+    mean_diff = mx.mean(
+        mx.abs(embed_cached.inputs_embeds - embed_fresh.inputs_embeds)
+    ).item()
     identical = mx.array_equal(embed_cached.inputs_embeds, embed_fresh.inputs_embeds)
     print(f"  identical: {identical}")
     print(f"  max_diff: {max_diff:.2e}")
@@ -210,7 +215,9 @@ def test_model(model_path: str, ssd_dir: Optional[str] = None) -> bool:
     result = cache.get(image_hash, model_path)
     assert result is not None, "Expected SSD cache hit"
     if isinstance(result, mx.array) and isinstance(features, mx.array):
-        assert mx.allclose(result, features, atol=1e-5), "SSD cache returned different data"
+        assert mx.allclose(result, features, atol=1e-5), (
+            "SSD cache returned different data"
+        )
     print(f"  SSD roundtrip: OK")
 
     stats = cache.stats
@@ -242,15 +249,15 @@ def test_model(model_path: str, ssd_dir: Optional[str] = None) -> bool:
     t_fresh = time.perf_counter() - t0
 
     speedup = t_fresh / t_cached if t_cached > 0 else float("inf")
-    print(f"  fresh:  {t_fresh*1000:.1f}ms")
-    print(f"  cached: {t_cached*1000:.1f}ms")
+    print(f"  fresh:  {t_fresh * 1000:.1f}ms")
+    print(f"  cached: {t_cached * 1000:.1f}ms")
     print(f"  speedup: {speedup:.1f}x")
 
     cache2.close()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"RESULT: PASS — full vision feature cache working for {model_type}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     return True
 
 

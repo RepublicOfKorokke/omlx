@@ -59,9 +59,17 @@ class TestListModelsSettings:
         mock_server_state.default_model = None
 
         with (
-            patch.object(admin_routes, "_get_engine_pool", return_value=mock_engine_pool),
-            patch.object(admin_routes, "_get_settings_manager", return_value=mock_settings_manager),
-            patch.object(admin_routes, "_get_server_state", return_value=mock_server_state),
+            patch.object(
+                admin_routes, "_get_engine_pool", return_value=mock_engine_pool
+            ),
+            patch.object(
+                admin_routes,
+                "_get_settings_manager",
+                return_value=mock_settings_manager,
+            ),
+            patch.object(
+                admin_routes, "_get_server_state", return_value=mock_server_state
+            ),
         ):
             result = asyncio.run(admin_routes.list_models(is_admin=True))
 
@@ -177,26 +185,31 @@ class TestVerifyAnyApiKey:
 
     def test_matches_main_key(self):
         from omlx.settings import SubKeyEntry
+
         sub_keys = [SubKeyEntry(key="sub1"), SubKeyEntry(key="sub2")]
         assert verify_any_api_key("main-key", "main-key", sub_keys) is True
 
     def test_matches_sub_key(self):
         from omlx.settings import SubKeyEntry
+
         sub_keys = [SubKeyEntry(key="sub1"), SubKeyEntry(key="sub2")]
         assert verify_any_api_key("sub2", "main-key", sub_keys) is True
 
     def test_no_match(self):
         from omlx.settings import SubKeyEntry
+
         sub_keys = [SubKeyEntry(key="sub1")]
         assert verify_any_api_key("wrong", "main-key", sub_keys) is False
 
     def test_empty_api_key(self):
         from omlx.settings import SubKeyEntry
+
         sub_keys = [SubKeyEntry(key="sub1")]
         assert verify_any_api_key("", "main-key", sub_keys) is False
 
     def test_no_main_key_matches_sub(self):
         from omlx.settings import SubKeyEntry
+
         sub_keys = [SubKeyEntry(key="sub1")]
         assert verify_any_api_key("sub1", "", sub_keys) is True
 
@@ -211,12 +224,18 @@ class TestVerifyAnyApiKey:
 
     def test_none_main_key_matches_sub(self):
         from omlx.settings import SubKeyEntry
+
         sub_keys = [SubKeyEntry(key="sub1")]
         assert verify_any_api_key("sub1", None, sub_keys) is True
 
     def test_matches_first_sub_key(self):
         from omlx.settings import SubKeyEntry
-        sub_keys = [SubKeyEntry(key="sub1"), SubKeyEntry(key="sub2"), SubKeyEntry(key="sub3")]
+
+        sub_keys = [
+            SubKeyEntry(key="sub1"),
+            SubKeyEntry(key="sub2"),
+            SubKeyEntry(key="sub3"),
+        ]
         assert verify_any_api_key("sub1", "main-key", sub_keys) is True
 
 
@@ -269,7 +288,9 @@ class TestSubKeyCRUD:
         mock_settings.auth.sub_keys = []
         original = _patch_getter(mock_settings)
         try:
-            request = admin_routes.CreateSubKeyRequest(key="new-sub-key", name="My Sub Key")
+            request = admin_routes.CreateSubKeyRequest(
+                key="new-sub-key", name="My Sub Key"
+            )
             result = asyncio.run(admin_routes.create_sub_key(request, is_admin=True))
             assert result["success"] is True
             assert result["sub_key"]["key"] == "new-sub-key"
@@ -483,9 +504,7 @@ class TestSetupApiKeyEndpoint:
                 request = admin_routes.SetupApiKeyRequest(
                     api_key="validkey123", api_key_confirm="validkey123"
                 )
-                result = asyncio.run(
-                    admin_routes.setup_api_key(request, mock_response)
-                )
+                result = asyncio.run(admin_routes.setup_api_key(request, mock_response))
 
                 assert result["success"] is True
                 assert mock_settings.auth.api_key == "validkey123"
@@ -565,11 +584,19 @@ class TestStatsSecurity:
         }
 
         with (
-            patch.object(admin_routes, "_get_global_settings", return_value=mock_settings),
+            patch.object(
+                admin_routes, "_get_global_settings", return_value=mock_settings
+            ),
             patch("omlx.server_metrics.get_server_metrics", return_value=mock_metrics),
             patch.object(admin_routes, "_get_engine_info", return_value={}),
-            patch.object(admin_routes, "_build_active_models_data", return_value={"models": []}),
-            patch.object(admin_routes, "_build_runtime_cache_observability", return_value={"models": []}),
+            patch.object(
+                admin_routes, "_build_active_models_data", return_value={"models": []}
+            ),
+            patch.object(
+                admin_routes,
+                "_build_runtime_cache_observability",
+                return_value={"models": []},
+            ),
         ):
             result = asyncio.run(admin_routes.get_server_stats(is_admin=True))
 
@@ -632,16 +659,12 @@ class TestRuntimeCacheObservability:
 
         entry_a = SimpleNamespace(
             engine=SimpleNamespace(
-                _engine=SimpleNamespace(
-                    engine=SimpleNamespace(scheduler=scheduler_a)
-                )
+                _engine=SimpleNamespace(engine=SimpleNamespace(scheduler=scheduler_a))
             )
         )
         entry_b = SimpleNamespace(
             engine=SimpleNamespace(
-                _engine=SimpleNamespace(
-                    engine=SimpleNamespace(scheduler=scheduler_b)
-                )
+                _engine=SimpleNamespace(engine=SimpleNamespace(scheduler=scheduler_b))
             )
         )
 
@@ -725,9 +748,7 @@ class TestRuntimeCacheObservability:
 
         bad_entry = SimpleNamespace(
             engine=SimpleNamespace(
-                _engine=SimpleNamespace(
-                    engine=SimpleNamespace(scheduler=bad_scheduler)
-                )
+                _engine=SimpleNamespace(engine=SimpleNamespace(scheduler=bad_scheduler))
             )
         )
         good_entry = SimpleNamespace(
@@ -784,9 +805,7 @@ class TestRuntimeCacheObservability:
 
         entry = SimpleNamespace(
             engine=SimpleNamespace(
-                _engine=SimpleNamespace(
-                    engine=SimpleNamespace(scheduler=scheduler)
-                )
+                _engine=SimpleNamespace(engine=SimpleNamespace(scheduler=scheduler))
             )
         )
 

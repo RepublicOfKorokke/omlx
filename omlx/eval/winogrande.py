@@ -32,13 +32,15 @@ class WinograndeBenchmark(BaseBenchmark):
 
         normalized = []
         for item in items:
-            normalized.append({
-                "id": item.get("id", ""),
-                "sentence": item["sentence"],
-                "option1": item["option1"],
-                "option2": item["option2"],
-                "answer": item["answer"],  # "1" or "2"
-            })
+            normalized.append(
+                {
+                    "id": item.get("id", ""),
+                    "sentence": item["sentence"],
+                    "option1": item["option1"],
+                    "option2": item["option2"],
+                    "answer": item["answer"],  # "1" or "2"
+                }
+            )
 
         logger.info(f"Winogrande: loaded {len(normalized)} questions")
 

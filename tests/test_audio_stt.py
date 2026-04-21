@@ -44,13 +44,16 @@ TINY_WAV = _make_wav_bytes()
 def _make_mock_stt_engine(transcript: str = "hello world") -> MagicMock:
     """Build a mock STTEngine that returns the given transcript."""
     from omlx.engine.stt import STTEngine
+
     engine = MagicMock(spec=STTEngine)
-    engine.transcribe = AsyncMock(return_value={
-        "text": transcript,
-        "language": "en",
-        "duration": 0.1,
-        "segments": [],
-    })
+    engine.transcribe = AsyncMock(
+        return_value={
+            "text": transcript,
+            "language": "en",
+            "duration": 0.1,
+            "segments": [],
+        }
+    )
     return engine
 
 
@@ -58,10 +61,12 @@ def _make_mock_pool(stt_engine=None, model_id: str = "whisper-tiny") -> MagicMoc
     """Build a mock EnginePool that returns the given STT engine."""
     pool = MagicMock()
     pool.get_engine = AsyncMock(return_value=stt_engine or _make_mock_stt_engine())
-    pool.get_entry = MagicMock(return_value=MagicMock(
-        model_type="audio_stt",
-        engine_type="stt",
-    ))
+    pool.get_entry = MagicMock(
+        return_value=MagicMock(
+            model_type="audio_stt",
+            engine_type="stt",
+        )
+    )
     pool.get_model_ids.return_value = [model_id]
     pool.preload_pinned_models = AsyncMock()
     pool.check_ttl_expirations = AsyncMock()
@@ -81,6 +86,7 @@ def audio_client():
     from omlx.api.audio_routes import router
 
     from fastapi import FastAPI
+
     app = FastAPI()
     app.include_router(router)
 
@@ -159,7 +165,12 @@ class TestSTTEndpointBasic:
         """Response text matches what the engine returned."""
         client, mock_pool = server_audio_client
         mock_pool.get_engine.return_value.transcribe = AsyncMock(
-            return_value={"text": "test transcription", "language": "en", "duration": 0.5, "segments": []}
+            return_value={
+                "text": "test transcription",
+                "language": "en",
+                "duration": 0.5,
+                "segments": [],
+            }
         )
 
         response = client.post(
@@ -243,6 +254,7 @@ class TestSTTEndpointErrors:
         """Requesting an unknown model returns 4xx error."""
         client, mock_pool = server_audio_client
         from omlx.exceptions import ModelNotFoundError
+
         mock_pool.get_engine.side_effect = ModelNotFoundError(
             model_id="nonexistent-model",
             available_models=["whisper-tiny"],
@@ -276,19 +288,26 @@ class TestSTTEndpointErrors:
 class TestVideoContainerRemap:
     """Video container extensions are remapped to .m4a for ffmpeg routing."""
 
-    @pytest.mark.parametrize("filename,expected_suffix", [
-        ("video.mp4", ".m4a"),
-        ("video.mkv", ".m4a"),
-        ("video.mov", ".m4a"),
-        ("video.m4v", ".m4a"),
-        ("video.webm", ".m4a"),
-        ("video.avi", ".m4a"),
-        ("audio.wav", ".wav"),
-        ("audio.m4a", ".m4a"),
-        ("audio.mp3", ".mp3"),
-    ])
+    @pytest.mark.parametrize(
+        "filename,expected_suffix",
+        [
+            ("video.mp4", ".m4a"),
+            ("video.mkv", ".m4a"),
+            ("video.mov", ".m4a"),
+            ("video.m4v", ".m4a"),
+            ("video.webm", ".m4a"),
+            ("video.avi", ".m4a"),
+            ("audio.wav", ".wav"),
+            ("audio.m4a", ".m4a"),
+            ("audio.mp3", ".mp3"),
+        ],
+    )
     def test_video_container_suffix_remap(
-        self, server_audio_client, filename, expected_suffix, tmp_path,
+        self,
+        server_audio_client,
+        filename,
+        expected_suffix,
+        tmp_path,
     ):
         """Temp file suffix should be .m4a for video containers, unchanged otherwise."""
         client, mock_pool = server_audio_client
@@ -329,9 +348,7 @@ class TestSTTModelAliasResolution:
         _ensure_audio_routes(app)
 
         mock_pool = _make_mock_pool(model_id="Qwen3-ASR-1.7B-bf16")
-        mock_pool.resolve_model_id = MagicMock(
-            return_value="Qwen3-ASR-1.7B-bf16"
-        )
+        mock_pool.resolve_model_id = MagicMock(return_value="Qwen3-ASR-1.7B-bf16")
 
         with patch("omlx.server._server_state") as mock_state:
             mock_state.engine_pool = mock_pool
@@ -349,9 +366,7 @@ class TestSTTModelAliasResolution:
                     files={"file": ("test.wav", TINY_WAV, "audio/wav")},
                 )
                 assert response.status_code == 200
-                mock_pool.get_engine.assert_awaited_once_with(
-                    "Qwen3-ASR-1.7B-bf16"
-                )
+                mock_pool.get_engine.assert_awaited_once_with("Qwen3-ASR-1.7B-bf16")
 
     def test_transcription_direct_model_id(self):
         """POST /v1/audio/transcriptions with direct model ID works without alias."""
@@ -361,9 +376,7 @@ class TestSTTModelAliasResolution:
 
         mock_pool = _make_mock_pool(model_id="Qwen3-ASR-1.7B-bf16")
         # resolve_model_id returns the same ID when no alias matches
-        mock_pool.resolve_model_id = MagicMock(
-            return_value="Qwen3-ASR-1.7B-bf16"
-        )
+        mock_pool.resolve_model_id = MagicMock(return_value="Qwen3-ASR-1.7B-bf16")
 
         with patch("omlx.server._server_state") as mock_state:
             mock_state.engine_pool = mock_pool
@@ -381,9 +394,7 @@ class TestSTTModelAliasResolution:
                     files={"file": ("test.wav", TINY_WAV, "audio/wav")},
                 )
                 assert response.status_code == 200
-                mock_pool.get_engine.assert_awaited_once_with(
-                    "Qwen3-ASR-1.7B-bf16"
-                )
+                mock_pool.get_engine.assert_awaited_once_with("Qwen3-ASR-1.7B-bf16")
 
 
 # ---------------------------------------------------------------------------
@@ -410,6 +421,7 @@ class TestSTTIntegration:
 
         try:
             import asyncio
+
             engine = STTEngine(model_name)
             asyncio.run(engine.start())
             result = asyncio.run(engine.transcribe(wav_path))

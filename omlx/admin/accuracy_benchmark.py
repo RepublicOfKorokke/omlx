@@ -33,10 +33,22 @@ _current_model: Optional[str] = None
 _engine_pool_ref: Any = None
 
 VALID_BENCHMARKS = [
-    "mmlu", "mmlu_pro", "kmmlu", "cmmlu", "jmmlu",
-    "hellaswag", "truthfulqa", "arc_challenge", "winogrande",
-    "gsm8k", "mathqa", "humaneval", "mbpp", "livecodebench",
-    "bbq", "safetybench",
+    "mmlu",
+    "mmlu_pro",
+    "kmmlu",
+    "cmmlu",
+    "jmmlu",
+    "hellaswag",
+    "truthfulqa",
+    "arc_challenge",
+    "winogrande",
+    "gsm8k",
+    "mathqa",
+    "humaneval",
+    "mbpp",
+    "livecodebench",
+    "bbq",
+    "safetybench",
 ]
 
 
@@ -263,9 +275,7 @@ async def _send_event(run: AccuracyBenchmarkRun, event: dict) -> None:
 # --- Benchmark execution ---
 
 
-async def run_accuracy_benchmark(
-    run: AccuracyBenchmarkRun, engine_pool: Any
-) -> None:
+async def run_accuracy_benchmark(run: AccuracyBenchmarkRun, engine_pool: Any) -> None:
     """Execute accuracy benchmark run.
 
     Phases:
@@ -287,15 +297,18 @@ async def run_accuracy_benchmark(
         # Phase 1: Unload all models
         loaded_ids = engine_pool.get_loaded_model_ids()
         if loaded_ids:
-            await _send_event(run, {
-                "type": "progress",
-                "phase": "unload",
-                "model_id": request.model_id,
-                "benchmark": "",
-                "message": f"Unloading {len(loaded_ids)} model(s)...",
-                "current": 0,
-                "total": len(request.benchmarks),
-            })
+            await _send_event(
+                run,
+                {
+                    "type": "progress",
+                    "phase": "unload",
+                    "model_id": request.model_id,
+                    "benchmark": "",
+                    "message": f"Unloading {len(loaded_ids)} model(s)...",
+                    "current": 0,
+                    "total": len(request.benchmarks),
+                },
+            )
             for model_id in loaded_ids:
                 try:
                     await engine_pool._unload_engine(model_id)
@@ -303,15 +316,18 @@ async def run_accuracy_benchmark(
                     logger.warning(f"Failed to unload {model_id}: {e}")
 
         # Phase 2: Load target model
-        await _send_event(run, {
-            "type": "progress",
-            "phase": "load",
-            "model_id": request.model_id,
-            "benchmark": "",
-            "message": f"Loading {request.model_id}...",
-            "current": 0,
-            "total": len(request.benchmarks),
-        })
+        await _send_event(
+            run,
+            {
+                "type": "progress",
+                "phase": "load",
+                "model_id": request.model_id,
+                "benchmark": "",
+                "message": f"Loading {request.model_id}...",
+                "current": 0,
+                "total": len(request.benchmarks),
+            },
+        )
 
         # Force LM engine for accuracy benchmarks — text-only tasks
         # don't need VLM and the VLM adapter can produce empty responses.
@@ -348,24 +364,30 @@ async def run_accuracy_benchmark(
             evaluator = bench_cls()
 
             # Load dataset
-            await _send_event(run, {
-                "type": "progress",
-                "phase": "download",
-                "model_id": request.model_id,
-                "benchmark": bench_name,
-                "message": f"Loading {bench_name} dataset...",
-                "current": completed,
-                "total": len(request.benchmarks),
-            })
+            await _send_event(
+                run,
+                {
+                    "type": "progress",
+                    "phase": "download",
+                    "model_id": request.model_id,
+                    "benchmark": bench_name,
+                    "message": f"Loading {bench_name} dataset...",
+                    "current": completed,
+                    "total": len(request.benchmarks),
+                },
+            )
 
             try:
                 items = await evaluator.load_dataset(sample_size=sample_size)
             except Exception as e:
                 logger.error(f"Failed to load {bench_name} dataset: {e}")
-                await _send_event(run, {
-                    "type": "error",
-                    "message": f"Failed to load {bench_name} dataset: {e}",
-                })
+                await _send_event(
+                    run,
+                    {
+                        "type": "error",
+                        "message": f"Failed to load {bench_name} dataset: {e}",
+                    },
+                )
                 run.status = "error"
                 run.error_message = str(e)
                 return
@@ -376,50 +398,64 @@ async def run_accuracy_benchmark(
             async def on_progress(current: int, total: int) -> None:
                 if run.status == "cancelled":
                     raise asyncio.CancelledError()
-                await _send_event(run, {
+                await _send_event(
+                    run,
+                    {
+                        "type": "progress",
+                        "phase": "eval",
+                        "model_id": request.model_id,
+                        "benchmark": bench_name,
+                        "message": f"Evaluating {bench_name} ({current}/{total})...",
+                        "current": completed,
+                        "total": len(request.benchmarks),
+                        "bench_current": current,
+                        "bench_total": total,
+                    },
+                )
+
+            await _send_event(
+                run,
+                {
                     "type": "progress",
                     "phase": "eval",
                     "model_id": request.model_id,
                     "benchmark": bench_name,
-                    "message": f"Evaluating {bench_name} ({current}/{total})...",
+                    "message": f"Evaluating {bench_name} (0/{total_items})...",
                     "current": completed,
                     "total": len(request.benchmarks),
-                    "bench_current": current,
-                    "bench_total": total,
-                })
-
-            await _send_event(run, {
-                "type": "progress",
-                "phase": "eval",
-                "model_id": request.model_id,
-                "benchmark": bench_name,
-                "message": f"Evaluating {bench_name} (0/{total_items})...",
-                "current": completed,
-                "total": len(request.benchmarks),
-                "bench_current": 0,
-                "bench_total": total_items,
-            })
+                    "bench_current": 0,
+                    "bench_total": total_items,
+                },
+            )
 
             try:
                 result = await evaluator.run(
-                    engine, items, on_progress,
+                    engine,
+                    items,
+                    on_progress,
                     batch_size=request.batch_size,
                     sampling_kwargs=sampling_kwargs,
                     enable_thinking=request.enable_thinking,
                 )
             except asyncio.CancelledError:
                 run.status = "cancelled"
-                await _send_event(run, {
-                    "type": "error",
-                    "message": "Benchmark cancelled",
-                })
+                await _send_event(
+                    run,
+                    {
+                        "type": "error",
+                        "message": "Benchmark cancelled",
+                    },
+                )
                 return
             except Exception as e:
                 logger.error(f"Error running {bench_name}: {e}")
-                await _send_event(run, {
-                    "type": "error",
-                    "message": f"Error running {bench_name}: {e}",
-                })
+                await _send_event(
+                    run,
+                    {
+                        "type": "error",
+                        "message": f"Error running {bench_name}: {e}",
+                    },
+                )
                 run.status = "error"
                 run.error_message = str(e)
                 return
@@ -458,10 +494,13 @@ async def run_accuracy_benchmark(
             run.results.append(result_data)
             completed += 1
 
-            await _send_event(run, {
-                "type": "result",
-                "data": result_data,
-            })
+            await _send_event(
+                run,
+                {
+                    "type": "result",
+                    "data": result_data,
+                },
+            )
 
         # Phase 4: Unload model
         try:
@@ -473,29 +512,38 @@ async def run_accuracy_benchmark(
         total_time = time.time() - start_time
         run.status = "completed"
 
-        await _send_event(run, {
-            "type": "done",
-            "summary": {
-                "model_id": request.model_id,
-                "total_time": round(total_time, 1),
-                "benchmarks_completed": completed,
+        await _send_event(
+            run,
+            {
+                "type": "done",
+                "summary": {
+                    "model_id": request.model_id,
+                    "total_time": round(total_time, 1),
+                    "benchmarks_completed": completed,
+                },
             },
-        })
+        )
 
     except asyncio.CancelledError:
         run.status = "cancelled"
-        await _send_event(run, {
-            "type": "error",
-            "message": "Benchmark cancelled",
-        })
+        await _send_event(
+            run,
+            {
+                "type": "error",
+                "message": "Benchmark cancelled",
+            },
+        )
     except Exception as e:
         logger.exception(f"Accuracy benchmark error: {e}")
         run.status = "error"
         run.error_message = str(e)
-        await _send_event(run, {
-            "type": "error",
-            "message": str(e),
-        })
+        await _send_event(
+            run,
+            {
+                "type": "error",
+                "message": str(e),
+            },
+        )
     finally:
         # Re-enable TTL auto-unload
         engine_pool._suppress_ttl = False

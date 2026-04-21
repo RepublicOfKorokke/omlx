@@ -32,6 +32,7 @@ class ServerStatus(Enum):
 @dataclass
 class PortConflict:
     """Returned by start() when the port is already in use."""
+
     pid: Optional[int]
     is_omlx: bool
 
@@ -75,7 +76,9 @@ class ServerManager:
         self._max_auto_restarts: int = 3
         self._auto_restart_count: int = 0
         self._last_healthy_time: float = 0.0
-        self._stable_threshold: float = 60.0  # Reset counter after 60s of stable running
+        self._stable_threshold: float = (
+            60.0  # Reset counter after 60s of stable running
+        )
 
     @property
     def status(self) -> ServerStatus:
@@ -135,9 +138,7 @@ class ServerManager:
                     elif self._process and self._process.poll() is not None:
                         # Case 1: Process exited → auto-restart
                         exit_code = self._process.returncode
-                        self._try_auto_restart(
-                            f"Server exited with code {exit_code}"
-                        )
+                        self._try_auto_restart(f"Server exited with code {exit_code}")
                     elif self._consecutive_health_failures >= self._max_health_failures:
                         # Case 2: Process alive but unresponsive → warn only
                         if self._status != ServerStatus.UNRESPONSIVE:
@@ -246,7 +247,9 @@ class ServerManager:
         try:
             result = subprocess.run(
                 ["lsof", "-ti", f":{self.config.port}", "-sTCP:LISTEN"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0 and result.stdout.strip():
                 return int(result.stdout.strip().splitlines()[0])
@@ -260,6 +263,7 @@ class ServerManager:
             os.kill(pid, signal.SIGTERM)
             # Wait up to 5 seconds for process to exit
             import time
+
             for _ in range(50):
                 time.sleep(0.1)
                 try:
@@ -445,6 +449,7 @@ class ServerManager:
     def restart(self) -> Union[bool, PortConflict]:
         self.stop()
         import time
+
         time.sleep(1)
         return self.start()
 

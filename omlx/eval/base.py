@@ -170,7 +170,10 @@ class BaseBenchmark(ABC):
         return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
     async def _eval_single(
-        self, engine: Any, item: dict, index: int,
+        self,
+        engine: Any,
+        item: dict,
+        index: int,
         sampling_kwargs: Optional[dict] = None,
         enable_thinking: bool = False,
     ) -> tuple[int, dict, str, str, str]:
@@ -189,9 +192,7 @@ class BaseBenchmark(ABC):
         if getattr(engine, "model_type", None) == "gpt_oss":
             max_tokens = max(max_tokens * 4, 8192)
         elif enable_thinking:
-            max_tokens = min(
-                max(max_tokens, THINKING_MIN_TOKENS), THINKING_MAX_TOKENS
-            )
+            max_tokens = min(max(max_tokens, THINKING_MIN_TOKENS), THINKING_MAX_TOKENS)
         kwargs["max_tokens"] = max_tokens
         kwargs["temperature"] = 0.0
         kwargs["presence_penalty"] = 0.0
@@ -284,7 +285,9 @@ class BaseBenchmark(ABC):
             batch_elapsed = time.time() - batch_start_time
 
             # Process results in order
-            for idx, item, response_text, prompt_text, _raw in sorted(batch_results, key=lambda x: x[0]):
+            for idx, item, response_text, prompt_text, _raw in sorted(
+                batch_results, key=lambda x: x[0]
+            ):
                 predicted = self.extract_answer(response_text, item)
                 is_correct = self.check_answer(predicted, item)
 

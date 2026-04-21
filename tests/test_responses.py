@@ -178,7 +178,9 @@ class TestConvertResponsesInput:
         assert len(messages[1]["tool_calls"]) == 1
         assert messages[1]["tool_calls"][0]["function"]["name"] == "get_weather"
         # arguments should be parsed as dict (not string) for Jinja2 chat templates
-        assert messages[1]["tool_calls"][0]["function"]["arguments"] == {"location": "Paris"}
+        assert messages[1]["tool_calls"][0]["function"]["arguments"] == {
+            "location": "Paris"
+        }
         # function_call_output → tool message
         assert messages[2]["role"] == "tool"
         assert messages[2]["tool_call_id"] == "call_abc"
@@ -279,24 +281,26 @@ class TestConvertResponsesInput:
         ]
         # Simulate 3 rounds of tool calls (Codex pattern)
         for i in range(3):
-            items.extend([
-                InputItem(
-                    type="message",
-                    role="assistant",
-                    content=[{"type": "output_text", "text": ""}],
-                ),
-                InputItem(
-                    type="function_call",
-                    call_id=f"call_{i}",
-                    name="exec_command",
-                    arguments=f'{{"cmd": "cmd_{i}"}}',
-                ),
-                InputItem(
-                    type="function_call_output",
-                    call_id=f"call_{i}",
-                    output=f"result_{i}",
-                ),
-            ])
+            items.extend(
+                [
+                    InputItem(
+                        type="message",
+                        role="assistant",
+                        content=[{"type": "output_text", "text": ""}],
+                    ),
+                    InputItem(
+                        type="function_call",
+                        call_id=f"call_{i}",
+                        name="exec_command",
+                        arguments=f'{{"cmd": "cmd_{i}"}}',
+                    ),
+                    InputItem(
+                        type="function_call_output",
+                        call_id=f"call_{i}",
+                        output=f"result_{i}",
+                    ),
+                ]
+            )
         messages = convert_responses_input_to_messages(items)
         # Count assistant messages — should be exactly 3 (one per round)
         assistant_msgs = [m for m in messages if m["role"] == "assistant"]
@@ -460,7 +464,10 @@ class TestConvertResponsesTools:
                 type="function",
                 name="get_weather",
                 description="Get weather info",
-                parameters={"type": "object", "properties": {"location": {"type": "string"}}},
+                parameters={
+                    "type": "object",
+                    "properties": {"location": {"type": "string"}},
+                },
             )
         ]
         result = convert_responses_tools(tools)
@@ -472,9 +479,7 @@ class TestConvertResponsesTools:
         assert "parameters" in result[0]["function"]
 
     def test_strict_field(self):
-        tools = [
-            ResponsesTool(name="fn", strict=True)
-        ]
+        tools = [ResponsesTool(name="fn", strict=True)]
         result = convert_responses_tools(tools)
         assert result[0]["function"]["strict"] is True
 
@@ -514,9 +519,7 @@ class TestInputItemOutputSerialization:
         item = InputItem(
             type="function_call_output",
             call_id="call_123",
-            output=[
-                {"type": "input_image", "image_url": "data:image/jpeg;base64,abc"}
-            ],
+            output=[{"type": "input_image", "image_url": "data:image/jpeg;base64,abc"}],
         )
         assert isinstance(item.output, str)
         parsed = json.loads(item.output)
@@ -688,7 +691,9 @@ class TestResponseStore:
         state_dir = tmp_path / "response-state"
         store = ResponseStore(max_size=10, state_dir=state_dir)
         public = {"id": "resp_1", "created_at": 1, "output": []}
-        record = build_response_store_record(public, [{"role": "user", "content": "Hi"}], [])
+        record = build_response_store_record(
+            public, [{"role": "user", "content": "Hi"}], []
+        )
         store.put("resp_1", record)
 
         reloaded = ResponseStore(max_size=10, state_dir=state_dir)
@@ -764,9 +769,7 @@ class TestConvertStoredResponse:
                 {
                     "type": "message",
                     "role": "assistant",
-                    "content": [
-                        {"type": "output_text", "text": "Hello!"}
-                    ],
+                    "content": [{"type": "output_text", "text": "Hello!"}],
                 }
             ]
         }
@@ -797,7 +800,9 @@ class TestConvertStoredResponse:
         assert messages[0]["content"] == "Let me check."
         assert messages[0]["tool_calls"][0]["function"]["name"] == "get_weather"
         # arguments should be parsed as dict for Jinja2 chat templates
-        assert messages[0]["tool_calls"][0]["function"]["arguments"] == {"location": "Paris"}
+        assert messages[0]["tool_calls"][0]["function"]["arguments"] == {
+            "location": "Paris"
+        }
 
     def test_empty_output(self):
         stored = {"output": []}

@@ -166,6 +166,7 @@ class DFlashEngine(BaseEngine):
         # Start fallback engine
         if self._fallback_engine_type == "vlm":
             from .vlm import VLMBatchedEngine
+
             self._fallback_engine = VLMBatchedEngine(
                 model_name=self._model_name,
                 scheduler_config=self._scheduler_config,
@@ -173,6 +174,7 @@ class DFlashEngine(BaseEngine):
             )
         else:
             from .batched import BatchedEngine
+
             self._fallback_engine = BatchedEngine(
                 model_name=self._model_name,
                 scheduler_config=self._scheduler_config,
@@ -180,9 +182,7 @@ class DFlashEngine(BaseEngine):
             )
         await self._fallback_engine.start()
         self._in_fallback_mode = True
-        logger.info(
-            f"DFlash fallback engine started: {self._fallback_engine_type}"
-        )
+        logger.info(f"DFlash fallback engine started: {self._fallback_engine_type}")
 
     async def stop(self) -> None:
         if self._fallback_engine is not None:
@@ -265,6 +265,7 @@ class DFlashEngine(BaseEngine):
             detokenizer = None
             try:
                 from mlx_lm.tokenizer_utils import NaiveStreamingDetokenizer
+
                 detokenizer = NaiveStreamingDetokenizer(self._executor_tokenizer)
             except ImportError:
                 pass
@@ -354,20 +355,32 @@ class DFlashEngine(BaseEngine):
                 )
                 await self._evict_dflash_and_start_fallback()
             return await self._fallback_engine.generate(
-                prompt=prompt, max_tokens=max_tokens, temperature=temperature,
-                top_p=top_p, top_k=top_k, min_p=min_p,
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                min_p=min_p,
                 repetition_penalty=repetition_penalty,
-                presence_penalty=presence_penalty, stop=stop, **kwargs,
+                presence_penalty=presence_penalty,
+                stop=stop,
+                **kwargs,
             )
 
         # Already in fallback mode but short context came in.
         # Stay in fallback mode (reloading dflash models is expensive).
         if self._in_fallback_mode:
             return await self._fallback_engine.generate(
-                prompt=prompt, max_tokens=max_tokens, temperature=temperature,
-                top_p=top_p, top_k=top_k, min_p=min_p,
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                min_p=min_p,
                 repetition_penalty=repetition_penalty,
-                presence_penalty=presence_penalty, stop=stop, **kwargs,
+                presence_penalty=presence_penalty,
+                stop=stop,
+                **kwargs,
             )
 
         from ..engine_core import get_mlx_executor
@@ -430,10 +443,16 @@ class DFlashEngine(BaseEngine):
                 )
                 await self._evict_dflash_and_start_fallback()
             async for output in self._fallback_engine.stream_generate(
-                prompt=prompt, max_tokens=max_tokens, temperature=temperature,
-                top_p=top_p, top_k=top_k, min_p=min_p,
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                min_p=min_p,
                 repetition_penalty=repetition_penalty,
-                presence_penalty=presence_penalty, stop=stop, **kwargs,
+                presence_penalty=presence_penalty,
+                stop=stop,
+                **kwargs,
             ):
                 yield output
             return
@@ -441,10 +460,16 @@ class DFlashEngine(BaseEngine):
         # Already in fallback mode — stay there
         if self._in_fallback_mode:
             async for output in self._fallback_engine.stream_generate(
-                prompt=prompt, max_tokens=max_tokens, temperature=temperature,
-                top_p=top_p, top_k=top_k, min_p=min_p,
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                min_p=min_p,
                 repetition_penalty=repetition_penalty,
-                presence_penalty=presence_penalty, stop=stop, **kwargs,
+                presence_penalty=presence_penalty,
+                stop=stop,
+                **kwargs,
             ):
                 yield output
             return
@@ -454,6 +479,7 @@ class DFlashEngine(BaseEngine):
         queue: asyncio.Queue = asyncio.Queue()
 
         from ..engine_core import get_mlx_executor
+
         loop.run_in_executor(
             get_mlx_executor(),
             self._run_generate_streaming,
@@ -515,10 +541,15 @@ class DFlashEngine(BaseEngine):
         )
 
         return await self.generate(
-            prompt=prompt, max_tokens=max_tokens, temperature=temperature,
-            top_p=top_p, top_k=top_k, min_p=min_p,
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            min_p=min_p,
             repetition_penalty=repetition_penalty,
-            presence_penalty=presence_penalty, **kwargs,
+            presence_penalty=presence_penalty,
+            **kwargs,
         )
 
     async def stream_chat(
@@ -544,15 +575,23 @@ class DFlashEngine(BaseEngine):
         )
 
         async for output in self.stream_generate(
-            prompt=prompt, max_tokens=max_tokens, temperature=temperature,
-            top_p=top_p, top_k=top_k, min_p=min_p,
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            min_p=min_p,
             repetition_penalty=repetition_penalty,
-            presence_penalty=presence_penalty, **kwargs,
+            presence_penalty=presence_penalty,
+            **kwargs,
         ):
             yield output
 
     def has_active_requests(self) -> bool:
-        if self._fallback_engine is not None and self._fallback_engine.has_active_requests():
+        if (
+            self._fallback_engine is not None
+            and self._fallback_engine.has_active_requests()
+        ):
             return True
         return self._active_request
 

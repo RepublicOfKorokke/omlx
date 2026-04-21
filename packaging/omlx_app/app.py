@@ -271,9 +271,7 @@ class OMLXAppDelegate(NSObject):
         button = self.status_item.button()
         if button is not None:
             if hasattr(button, "setAccessibilityIdentifier_"):
-                button.setAccessibilityIdentifier_(
-                    "com.omlx.app.statusItemButton"
-                )
+                button.setAccessibilityIdentifier_("com.omlx.app.statusItemButton")
             if hasattr(button, "setAccessibilityTitle_"):
                 button.setAccessibilityTitle_("oMLX")
             if hasattr(button, "setAccessibilityLabel_"):
@@ -299,9 +297,7 @@ class OMLXAppDelegate(NSObject):
         if self._recreate_attempted:
             return
         self._recreate_attempted = True
-        logger.warning(
-            "recreating NSStatusItem as a one-shot recovery attempt"
-        )
+        logger.warning("recreating NSStatusItem as a one-shot recovery attempt")
         old = self.status_item
         try:
             NSStatusBar.systemStatusBar().removeStatusItem_(old)
@@ -388,10 +384,8 @@ class OMLXAppDelegate(NSObject):
             self._recreate_status_item()
             # Give macOS ~1s to finish registering the new item before we
             # re-probe. If it's still hidden, show the alert.
-            self._visibility_check_timer = (
-                NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-                    1.0, self, "checkStatusItemVisibilityAfterRecreate:", None, False
-                )
+            self._visibility_check_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+                1.0, self, "checkStatusItemVisibilityAfterRecreate:", None, False
             )
             return
 
@@ -455,14 +449,14 @@ class OMLXAppDelegate(NSObject):
                 "The oMLX menubar icon isn't showing up.\n\n"
                 "On macOS Tahoe this is usually caused by the StatusKit "
                 "approval flag being false in the system preferences. "
-                "\"Auto-Fix\" will flip that flag and restart ControlCenter "
+                '"Auto-Fix" will flip that flag and restart ControlCenter '
                 "(needs Full Disk Access), or you can toggle the app manually "
                 "in System Settings > Menu Bar."
             )
-            alert.addButtonWithTitle_("Auto-Fix")       # 1000
-            alert.addButtonWithTitle_(settings_label)    # 1001
-            alert.addButtonWithTitle_("View Log")        # 1002
-            alert.addButtonWithTitle_("Dismiss")         # 1003
+            alert.addButtonWithTitle_("Auto-Fix")  # 1000
+            alert.addButtonWithTitle_(settings_label)  # 1001
+            alert.addButtonWithTitle_("View Log")  # 1002
+            alert.addButtonWithTitle_("Dismiss")  # 1003
         else:
             alert.setInformativeText_(
                 "The oMLX menubar icon isn't showing up.\n\n"
@@ -470,10 +464,10 @@ class OMLXAppDelegate(NSObject):
                 "for third-party menubar apps. Try quitting and relaunching "
                 "oMLX, and check menubar manager tools like Bartender or "
                 "Ice if you use them.\n\n"
-                "Click \"View Log\" to see what the app detected."
+                'Click "View Log" to see what the app detected.'
             )
-            alert.addButtonWithTitle_("View Log")        # 1000
-            alert.addButtonWithTitle_("Dismiss")         # 1001
+            alert.addButtonWithTitle_("View Log")  # 1000
+            alert.addButtonWithTitle_("Dismiss")  # 1001
 
         alert_window = alert.window()
         if alert_window is not None:
@@ -606,7 +600,7 @@ class OMLXAppDelegate(NSObject):
             "apps."
         )
         alert.addButtonWithTitle_("View Log")  # 1000
-        alert.addButtonWithTitle_("Dismiss")   # 1001
+        alert.addButtonWithTitle_("Dismiss")  # 1001
 
         alert_window = alert.window()
         if alert_window is not None:
@@ -634,7 +628,7 @@ class OMLXAppDelegate(NSObject):
             "Auto-Fix needs Full Disk Access so oMLX can edit the StatusKit "
             "approval file in your Group Containers folder. macOS blocks "
             "that path by default.\n\n"
-            "1. Click \"Open Privacy Settings\" below.\n"
+            '1. Click "Open Privacy Settings" below.\n'
             "2. Find oMLX in the Full Disk Access list (drag it in from "
             "/Applications if it isn't listed).\n"
             "3. Toggle oMLX on.\n"
@@ -652,9 +646,7 @@ class OMLXAppDelegate(NSObject):
         """Surface the outcome of _fix_statuskit_permission() back to the user."""
         NSApp.activateIgnoringOtherApps_(True)
         alert = NSAlert.alloc().init()
-        alert.setMessageText_(
-            "Auto-Fix Succeeded" if success else "Auto-Fix Failed"
-        )
+        alert.setMessageText_("Auto-Fix Succeeded" if success else "Auto-Fix Failed")
         alert.setInformativeText_(message)
         alert.addButtonWithTitle_("OK")
         alert_window = alert.window()
@@ -795,9 +787,7 @@ class OMLXAppDelegate(NSObject):
 
         # Re-encode preserving the original container format.
         if nested_as_bytes or raw is None:
-            data["trackedApplications"] = plistlib.dumps(
-                inner, fmt=plistlib.FMT_BINARY
-            )
+            data["trackedApplications"] = plistlib.dumps(inner, fmt=plistlib.FMT_BINARY)
         else:
             data["trackedApplications"] = inner
 
@@ -857,9 +847,7 @@ class OMLXAppDelegate(NSObject):
                             "No change applied.",
                         )
                     except OSError as restore_err:
-                        logger.error(
-                            "Restore from backup failed: %s", restore_err
-                        )
+                        logger.error("Restore from backup failed: %s", restore_err)
                 return (
                     False,
                     "Plist post-write validation failed and the backup "
@@ -869,9 +857,7 @@ class OMLXAppDelegate(NSObject):
                 )
 
         try:
-            subprocess.run(
-                ["killall", "ControlCenter"], timeout=5, check=False
-            )
+            subprocess.run(["killall", "ControlCenter"], timeout=5, check=False)
         except subprocess.SubprocessError as e:
             logger.warning("killall ControlCenter failed: %s", e)
             return (
@@ -881,7 +867,8 @@ class OMLXAppDelegate(NSObject):
             )
 
         detail = (
-            "appended a new com.omlx.app entry" if appended_new
+            "appended a new com.omlx.app entry"
+            if appended_new
             else "flipped the existing com.omlx.app entry to isAllowed=True"
         )
         return (
@@ -906,9 +893,7 @@ class OMLXAppDelegate(NSObject):
             if (res / "navbar-logo-dark.svg").exists():
                 return res
         # Development fallback: omlx/admin/static/
-        dev_path = (
-            Path(__file__).parent.parent.parent / "omlx" / "admin" / "static"
-        )
+        dev_path = Path(__file__).parent.parent.parent / "omlx" / "admin" / "static"
         if dev_path.exists():
             return dev_path
         return Path(__file__).parent
@@ -1043,9 +1028,7 @@ class OMLXAppDelegate(NSObject):
         from AppKit import NSAlert, NSAlertFirstButtonReturn
 
         alert = NSAlert.alloc().init()
-        alert.setMessageText_(
-            f"Update to oMLX {self._update_info['version']}?"
-        )
+        alert.setMessageText_(f"Update to oMLX {self._update_info['version']}?")
 
         notes = self._update_info.get("notes", "")
         if len(notes) > 500:
@@ -1133,8 +1116,7 @@ class OMLXAppDelegate(NSObject):
         alert = NSAlert.alloc().init()
         alert.setMessageText_("Update Failed")
         alert.setInformativeText_(
-            f"{message}\n\n"
-            "Would you like to download the update manually?"
+            f"{message}\n\nWould you like to download the update manually?"
         )
         alert.addButtonWithTitle_("Open GitHub")
         alert.addButtonWithTitle_("Cancel")
@@ -1190,7 +1172,7 @@ class OMLXAppDelegate(NSObject):
         """
         try:
             # macOS 11+ SF Symbols support
-            if hasattr(NSImage, 'imageWithSystemSymbolName_accessibilityDescription_'):
+            if hasattr(NSImage, "imageWithSystemSymbolName_accessibilityDescription_"):
                 icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_(
                     sf_symbol, None
                 )
@@ -1273,9 +1255,7 @@ class OMLXAppDelegate(NSObject):
         ]
         for suffix, factor in units:
             if abs_n >= factor:
-                compact = (n / factor).quantize(
-                    Decimal("0.01"), rounding=ROUND_HALF_UP
-                )
+                compact = (n / factor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 return f"{compact}{suffix}", raw_value
 
         if is_integer:
@@ -1299,9 +1279,7 @@ class OMLXAppDelegate(NSObject):
 
         try:
             paragraph = NSMutableParagraphStyle.alloc().init()
-            tab = NSTextTab.alloc().initWithType_location_(
-                NSRightTabStopType, tab_stop
-            )
+            tab = NSTextTab.alloc().initWithType_location_(NSRightTabStopType, tab_stop)
             paragraph.setTabStops_([tab])
 
             attrs = {NSParagraphStyleAttributeName: paragraph}
@@ -1386,16 +1364,12 @@ class OMLXAppDelegate(NSObject):
                 update_text = f"⬇️ {progress}"
                 update_action = None
             else:
-                update_text = (
-                    f"🔔 Update Available ({self._update_info['version']})"
-                )
+                update_text = f"🔔 Update Available ({self._update_info['version']})"
                 update_action = "openUpdate:"
 
-            attributed_update = (
-                NSAttributedString.alloc().initWithString_attributes_(
-                    update_text,
-                    {NSForegroundColorAttributeName: NSColor.systemGreenColor()},
-                )
+            attributed_update = NSAttributedString.alloc().initWithString_attributes_(
+                update_text,
+                {NSForegroundColorAttributeName: NSColor.systemGreenColor()},
             )
             update_item = NSMenuItem.alloc().init()
             update_item.setAttributedTitle_(attributed_update)
@@ -1435,7 +1409,8 @@ class OMLXAppDelegate(NSObject):
         if stop_icon:
             stop_item.setImage_(stop_icon)
         stop_item.setHidden_(
-            status not in (
+            status
+            not in (
                 ServerStatus.RUNNING,
                 ServerStatus.STARTING,
                 ServerStatus.STOPPING,
@@ -1513,7 +1488,10 @@ class OMLXAppDelegate(NSObject):
 
             # One shared tab stop keeps the right value edge aligned across both sections.
             shared_tab_stop = self._compute_stats_tab_stop(
-                [(label, value) for label, value, _ in (session_entries + alltime_entries)]
+                [
+                    (label, value)
+                    for label, value, _ in (session_entries + alltime_entries)
+                ]
             )
             header_row_width = shared_tab_stop + 28.0
 
@@ -1653,7 +1631,8 @@ class OMLXAppDelegate(NSObject):
         # Toggle server-control item visibility
         if self._stop_item:
             self._stop_item.setHidden_(
-                status not in (
+                status
+                not in (
                     ServerStatus.RUNNING,
                     ServerStatus.STARTING,
                     ServerStatus.STOPPING,
@@ -1833,6 +1812,7 @@ class OMLXAppDelegate(NSObject):
                 if conflict.pid:
                     self.server_manager._kill_external_server(conflict.pid)
                     import time
+
                     time.sleep(0.5)
                 result = self.server_manager.start()
                 if isinstance(result, PortConflict):

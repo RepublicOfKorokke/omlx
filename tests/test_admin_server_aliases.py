@@ -25,7 +25,9 @@ from omlx.utils.network import (
 # =============================================================================
 
 
-def _make_global_settings(server_aliases: list[str] | None = None, host: str = "127.0.0.1"):
+def _make_global_settings(
+    server_aliases: list[str] | None = None, host: str = "127.0.0.1"
+):
     """Build a MagicMock GlobalSettings with the fields the alias paths touch."""
     gs = MagicMock()
     gs.server.host = host

@@ -38,10 +38,14 @@ def audio_model_dir(tmp_path):
 
     stt_dir = tmp_path / "whisper-tiny"
     stt_dir.mkdir()
-    (stt_dir / "config.json").write_text(json.dumps({
-        "model_type": "whisper",
-        "architectures": ["WhisperForConditionalGeneration"],
-    }))
+    (stt_dir / "config.json").write_text(
+        json.dumps(
+            {
+                "model_type": "whisper",
+                "architectures": ["WhisperForConditionalGeneration"],
+            }
+        )
+    )
     (stt_dir / "model.safetensors").write_bytes(b"0" * 2048)  # ~2KB
 
     tts_dir = tmp_path / "kokoro-tts"
@@ -286,10 +290,14 @@ class TestAudioPreLoadEviction:
 
         stt_dir = tmp_path / "whisper-tiny"
         stt_dir.mkdir()
-        (stt_dir / "config.json").write_text(json.dumps({
-            "model_type": "whisper",
-            "architectures": ["WhisperForConditionalGeneration"],
-        }))
+        (stt_dir / "config.json").write_text(
+            json.dumps(
+                {
+                    "model_type": "whisper",
+                    "architectures": ["WhisperForConditionalGeneration"],
+                }
+            )
+        )
         (stt_dir / "model.safetensors").write_bytes(b"0" * 2048)
 
         # Limit: allow one model but not both simultaneously

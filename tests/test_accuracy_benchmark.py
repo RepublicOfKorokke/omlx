@@ -79,6 +79,7 @@ class TestAccuracyBenchmarkRequest:
 class TestQueueAndResults:
     def setup_method(self):
         from omlx.admin.accuracy_benchmark import _queue
+
         _queue.clear()
         reset_accumulated_results()
 
@@ -98,13 +99,17 @@ class TestQueueAndResults:
         assert len(status["queue"]) == 0
 
     def test_accumulated_results(self):
-        _accumulated_results.append({"model_id": "m1", "benchmark": "mmlu", "accuracy": 0.5})
+        _accumulated_results.append(
+            {"model_id": "m1", "benchmark": "mmlu", "accuracy": 0.5}
+        )
         results = get_accumulated_results()
         assert len(results) == 1
         assert results[0]["model_id"] == "m1"
 
     def test_reset_accumulated_results(self):
-        _accumulated_results.append({"model_id": "m1", "benchmark": "mmlu", "accuracy": 0.5})
+        _accumulated_results.append(
+            {"model_id": "m1", "benchmark": "mmlu", "accuracy": 0.5}
+        )
         reset_accumulated_results()
         assert len(get_accumulated_results()) == 0
 
@@ -112,6 +117,7 @@ class TestQueueAndResults:
 class TestRunLifecycle:
     def setup_method(self):
         from omlx.admin.accuracy_benchmark import _accuracy_runs
+
         _accuracy_runs.clear()
 
     def test_create_run(self):
@@ -227,14 +233,16 @@ class TestRunAccuracyBenchmark:
 
         mock_evaluator = MagicMock()
         mock_evaluator.load_dataset = AsyncMock(return_value=[])
-        mock_evaluator.run = AsyncMock(return_value=MagicMock(
-            benchmark_name="mmlu",
-            accuracy=0.0,
-            total_questions=0,
-            correct_count=0,
-            time_seconds=0.0,
-            category_scores=None,
-        ))
+        mock_evaluator.run = AsyncMock(
+            return_value=MagicMock(
+                benchmark_name="mmlu",
+                accuracy=0.0,
+                total_questions=0,
+                correct_count=0,
+                time_seconds=0.0,
+                category_scores=None,
+            )
+        )
 
         mock_bench_cls = MagicMock(return_value=mock_evaluator)
 

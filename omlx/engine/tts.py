@@ -89,7 +89,9 @@ class TTSEngine(BaseNonStreamingEngine):
                 logger.warning(
                     "Strict weight loading failed for %s (likely quantized "
                     "model with mlx-audio compatibility issue), retrying "
-                    "with strict=False: %s", model_name, exc,
+                    "with strict=False: %s",
+                    model_name,
+                    exc,
                 )
                 return _load_model(model_name, strict=False)
 
@@ -154,7 +156,10 @@ class TTSEngine(BaseNonStreamingEngine):
 
         logger.info(
             "TTS synthesize: model=%s, text_len=%d, voice=%s, speed=%.1f, ref_audio=%s",
-            self._model_name, len(text), voice, speed,
+            self._model_name,
+            len(text),
+            voice,
+            speed,
             "yes" if ref_audio else "no",
         )
 
@@ -169,6 +174,7 @@ class TTSEngine(BaseNonStreamingEngine):
                 "verbose": False,
             }
             import inspect
+
             gen_params = inspect.signature(model.generate).parameters
             if voice is not None:
                 # Route voice to the correct generate() kwarg.
@@ -218,14 +224,14 @@ class TTSEngine(BaseNonStreamingEngine):
             self._active_count += 1
         try:
             loop = asyncio.get_running_loop()
-            result = await loop.run_in_executor(
-                get_mlx_executor(), _synthesize_sync
-            )
+            result = await loop.run_in_executor(get_mlx_executor(), _synthesize_sync)
 
             elapsed = time.monotonic() - t0
             logger.info(
                 "TTS synthesize done: model=%s, %.2fs, %d bytes output",
-                self._model_name, elapsed, len(result),
+                self._model_name,
+                elapsed,
+                len(result),
             )
             return result
         finally:

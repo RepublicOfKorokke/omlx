@@ -33,13 +33,17 @@ class HellaSwagBenchmark(BaseBenchmark):
         normalized = []
         for item in items:
             label = item.get("label", "0")
-            normalized.append({
-                "id": item.get("ind", ""),
-                "context": item.get("ctx", ""),
-                "endings": item.get("endings", []),
-                "answer": int(label) if isinstance(label, (int, float)) else int(label),
-                "activity_label": item.get("activity_label", ""),
-            })
+            normalized.append(
+                {
+                    "id": item.get("ind", ""),
+                    "context": item.get("ctx", ""),
+                    "endings": item.get("endings", []),
+                    "answer": int(label)
+                    if isinstance(label, (int, float))
+                    else int(label),
+                    "activity_label": item.get("activity_label", ""),
+                }
+            )
 
         logger.info(f"HellaSwag: loaded {len(normalized)} questions")
 

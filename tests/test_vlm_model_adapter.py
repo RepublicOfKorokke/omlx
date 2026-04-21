@@ -221,6 +221,7 @@ class TestVLMModelAdapter:
         # cache should be wrapped with _IntOffsetCacheProxy
         call_args = vlm.language_model.call_args
         from omlx.models.vlm import _IntOffsetCacheProxy
+
         assert isinstance(call_args[1]["cache"][0], _IntOffsetCacheProxy)
 
     def test_forward_with_embeddings(self):
@@ -284,7 +285,6 @@ class TestVLMModelAdapter:
 
         vlm.get_input_embeddings.assert_called_once_with(input_ids, pixel_values)
         assert result is expected
-
 
     def test_forward_with_inputs_embeds_kwarg(self):
         """Test batched VLM path: inputs_embeds kwarg passed to language_model."""
@@ -635,4 +635,3 @@ class TestIntOffsetCacheProxy:
         proxy = _IntOffsetCacheProxy(cache)
         assert proxy.offset == 625
         assert isinstance(proxy.offset, int)
-

@@ -63,12 +63,14 @@ class TruthfulQABenchmark(BaseBenchmark):
             shuffled = [choices[j] for j in indices]
             new_correct_pos = indices.index(correct_idx)
 
-            items.append({
-                "id": str(i),
-                "question": question,
-                "choices": shuffled,
-                "answer": new_correct_pos,
-            })
+            items.append(
+                {
+                    "id": str(i),
+                    "question": question,
+                    "choices": shuffled,
+                    "answer": new_correct_pos,
+                }
+            )
 
         logger.info(f"TruthfulQA: loaded {len(items)} questions")
 

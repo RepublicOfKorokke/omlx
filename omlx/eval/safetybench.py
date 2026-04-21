@@ -35,14 +35,16 @@ class SafetyBenchBenchmark(BaseBenchmark):
             labels = item.get("labels", [])
             if not choices or not labels:
                 continue
-            normalized.append({
-                "id": item.get("id", ""),
-                "question": item["question"],
-                "choices": choices,
-                "labels": labels,
-                "answer": item["answer"],
-                "category": item.get("category", "unknown"),
-            })
+            normalized.append(
+                {
+                    "id": item.get("id", ""),
+                    "question": item["question"],
+                    "choices": choices,
+                    "labels": labels,
+                    "answer": item["answer"],
+                    "category": item.get("category", "unknown"),
+                }
+            )
 
         logger.info(f"SafetyBench: loaded {len(normalized)} questions")
 

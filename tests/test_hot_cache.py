@@ -45,8 +45,7 @@ class TestHotCacheDisabled:
         """Save/load should work even when hot cache is disabled."""
         block_hash = b"disabled_hot_cache_test"
         cache_data = [
-            (mx.zeros((1, 8, 64, 64)), mx.zeros((1, 8, 64, 64)))
-            for _ in range(4)
+            (mx.zeros((1, 8, 64, 64)), mx.zeros((1, 8, 64, 64))) for _ in range(4)
         ]
         result = manager.save_block(
             block_hash=block_hash,
@@ -117,8 +116,8 @@ class TestHotCacheEnabled:
         # Verify hot cache has the entry
         entry = manager._hot_cache_get(block_hash)
         assert entry is not None
-        assert 'tensors_raw' in entry
-        assert entry['num_layers'] == 4
+        assert "tensors_raw" in entry
+        assert entry["num_layers"] == 4
 
     def test_load_from_hot_cache(self, manager):
         """load_block() should return data from hot cache without SSD I/O."""
@@ -461,14 +460,14 @@ class TestHotCacheConcurrency:
                     # Create a fake hot cache entry with raw bytes
                     raw_data = bytes(1024)  # 1KB of zeros
                     entry = {
-                        'tensors_raw': {
-                            'layer_0_keys': (raw_data, 'float32', [1, 2, 16, 8]),
-                            'layer_0_values': (raw_data, 'float32', [1, 2, 16, 8]),
+                        "tensors_raw": {
+                            "layer_0_keys": (raw_data, "float32", [1, 2, 16, 8]),
+                            "layer_0_values": (raw_data, "float32", [1, 2, 16, 8]),
                         },
-                        'file_metadata': {},
-                        'num_layers': 1,
-                        'layer_cache_types': ['KVCache'],
-                        'block_metadata': None,
+                        "file_metadata": {},
+                        "num_layers": 1,
+                        "layer_cache_types": ["KVCache"],
+                        "block_metadata": None,
                     }
                     mgr._hot_cache_put(block_hash, entry)
 

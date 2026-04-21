@@ -59,10 +59,10 @@ def clean_all(preserve_venv: bool = False):
     venv_dirs = {BUILD_DIR, EXPORT_DIR, WHEELS_DIR, SCRIPT_DIR / "requirements"}
 
     dirs_to_clean = [
-        BUILD_DIR,      # _build/
-        EXPORT_DIR,     # _export/
-        WHEELS_DIR,     # _wheels/
-        DIST_DIR,       # dist/
+        BUILD_DIR,  # _build/
+        EXPORT_DIR,  # _export/
+        WHEELS_DIR,  # _wheels/
+        DIST_DIR,  # dist/
         SCRIPT_DIR / "requirements",  # venvstacks lock files
     ]
 
@@ -129,9 +129,7 @@ def _resolve_mlx_version(toml_path: Path) -> str:
     import json
     import urllib.request
 
-    data = json.loads(
-        urllib.request.urlopen("https://pypi.org/pypi/mlx/json").read()
-    )
+    data = json.loads(urllib.request.urlopen("https://pypi.org/pypi/mlx/json").read())
     return data["info"]["version"]
 
 
@@ -172,22 +170,28 @@ def swap_platform_wheels(
     wheels_tmp.mkdir()
 
     for pkg in packages:
-        run_cmd([
-            sys.executable, "-m", "pip", "download",
-            f"{pkg}=={mlx_version}",
-            "--platform", platform_tag,
-            f"--python-version={python_version}",
-            "--only-binary", ":all:",
-            "--no-deps",
-            "-d", str(wheels_tmp),
-        ])
+        run_cmd(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "download",
+                f"{pkg}=={mlx_version}",
+                "--platform",
+                platform_tag,
+                f"--python-version={python_version}",
+                "--only-binary",
+                ":all:",
+                "--no-deps",
+                "-d",
+                str(wheels_tmp),
+            ]
+        )
 
     # Remove existing mlx/mlx-metal from site-packages
     for item in site_packages.iterdir():
         name = item.name.lower()
-        if name in ("mlx", "mlx_metal") or name.startswith(
-            ("mlx-", "mlx_metal-")
-        ):
+        if name in ("mlx", "mlx_metal") or name.startswith(("mlx-", "mlx_metal-")):
             if item.is_dir():
                 shutil.rmtree(item)
                 print(f"    Removed {item.name}")
@@ -201,7 +205,6 @@ def swap_platform_wheels(
     # Cleanup
     shutil.rmtree(wheels_tmp)
     print(f"  ✓ Swapped to {platform_tag}")
-
 
 
 def _parse_git_requirements(toml_path: Path) -> list[tuple[str, str]]:
@@ -227,7 +230,6 @@ def _wheel_version(whl_path: Path) -> str:
 def _wheel_pkg_name(whl_path: Path) -> str:
     """Extract normalized package name from wheel filename."""
     return whl_path.stem.split("-")[0].replace("_", "-").lower()
-
 
 
 def _find_target_python() -> str:
@@ -272,8 +274,16 @@ def _build_sdist_wheel(pkg_name: str) -> bool:
     target_python = _find_target_python()
     print(f"  Building wheel for {pkg_name} (sdist-only, using {target_python})...")
     result = subprocess.run(
-        [target_python, "-m", "pip", "wheel", pkg_name, "--no-deps",
-         "-w", str(WHEELS_DIR)],
+        [
+            target_python,
+            "-m",
+            "pip",
+            "wheel",
+            pkg_name,
+            "--no-deps",
+            "-w",
+            str(WHEELS_DIR),
+        ],
         capture_output=False,
     )
     return result.returncode == 0
@@ -305,12 +315,18 @@ def build_local_wheels():
     for full_req, git_url in git_reqs:
         pkg_name = full_req.split("@")[0].strip()
         print(f"  Building wheel for {pkg_name} ...")
-        run_cmd([
-            sys.executable, "-m", "pip", "wheel",
-            git_url,
-            "--no-deps",
-            "-w", str(WHEELS_DIR),
-        ])
+        run_cmd(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "wheel",
+                git_url,
+                "--no-deps",
+                "-w",
+                str(WHEELS_DIR),
+            ]
+        )
 
     # Build version mapping from git-pinned wheels only
     # (used for rewriting venvstacks.toml git URLs to local file:// paths)
@@ -341,7 +357,9 @@ def _lock_with_sdist_retry(lock_cmd: list, max_retries: int = 10):
     built = set()
     for attempt in range(max_retries):
         result = subprocess.run(
-            lock_cmd, capture_output=True, text=True,
+            lock_cmd,
+            capture_output=True,
+            text=True,
         )
         if result.returncode == 0:
             if result.stdout:
@@ -353,9 +371,7 @@ def _lock_with_sdist_retry(lock_cmd: list, max_retries: int = 10):
         combined = stderr + stdout
 
         # Pattern: "Because <pkg>==<ver> has no usable wheels"
-        match = re.search(
-            r"Because\s+(\S+)==\S+\s+has no usable wheels", combined
-        )
+        match = re.search(r"Because\s+(\S+)==\S+\s+has no usable wheels", combined)
         if not match:
             # Not a sdist-only failure — print output and abort
             if stdout:
@@ -516,7 +532,10 @@ def build_venvstacks():
     # _lock_with_sdist_retry() builds them locally and retries automatically.
     print("\n  Locking environments...")
     lock_cmd = [
-        "pipx", "run", "venvstacks", "lock",
+        "pipx",
+        "run",
+        "venvstacks",
+        "lock",
         str(resolved_toml),
     ] + local_wheels_args
     if version_map:
@@ -528,22 +547,34 @@ def build_venvstacks():
 
     # Step 4: Build environments
     print("\n  Building environments (this may take a while)...")
-    run_cmd([
-        "pipx", "run", "venvstacks", "build",
-        str(resolved_toml),
-        "--no-lock",
-    ] + local_wheels_args)
+    run_cmd(
+        [
+            "pipx",
+            "run",
+            "venvstacks",
+            "build",
+            str(resolved_toml),
+            "--no-lock",
+        ]
+        + local_wheels_args
+    )
 
     # Step 5: Export to local directory for app bundle
     print("\n  Exporting environments...")
     if EXPORT_DIR.exists():
         shutil.rmtree(EXPORT_DIR)
 
-    run_cmd([
-        "pipx", "run", "venvstacks", "local-export",
-        str(resolved_toml),
-        "--output-dir", str(EXPORT_DIR),
-    ])
+    run_cmd(
+        [
+            "pipx",
+            "run",
+            "venvstacks",
+            "local-export",
+            str(resolved_toml),
+            "--output-dir",
+            str(EXPORT_DIR),
+        ]
+    )
 
     # Cleanup temporary toml
     if version_map and resolved_toml.exists():
@@ -567,7 +598,9 @@ def build_venvstacks():
 
 
 # mlx-audio git commit — aligned with pyproject.toml [audio] extra
-_MLX_AUDIO_GIT = "git+https://github.com/Blaizzy/mlx-audio@51753266e0a4f766fd5e6fbc46652224efc23981"
+_MLX_AUDIO_GIT = (
+    "git+https://github.com/Blaizzy/mlx-audio@51753266e0a4f766fd5e6fbc46652224efc23981"
+)
 
 
 def _install_mlx_audio(export_dir: Path):
@@ -579,25 +612,29 @@ def _install_mlx_audio(export_dir: Path):
     audio_wheels.mkdir()
 
     # Build wheel
-    run_cmd([
-        sys.executable, "-m", "pip", "wheel",
-        "--no-deps", "--wheel-dir", str(audio_wheels),
-        _MLX_AUDIO_GIT,
-    ])
+    run_cmd(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "wheel",
+            "--no-deps",
+            "--wheel-dir",
+            str(audio_wheels),
+            _MLX_AUDIO_GIT,
+        ]
+    )
 
     # Install into framework site-packages
     fw_site = (
-        export_dir
-        / "framework-mlx-framework"
-        / "lib"
-        / "python3.11"
-        / "site-packages"
+        export_dir / "framework-mlx-framework" / "lib" / "python3.11" / "site-packages"
     )
     if not fw_site.exists():
         print(f"  ✗ site-packages not found: {fw_site}")
         return
 
     import zipfile
+
     for whl in audio_wheels.glob("*.whl"):
         print(f"    Installing {whl.name} (--no-deps)")
         with zipfile.ZipFile(whl) as zf:
@@ -624,11 +661,7 @@ def _install_spacy_model(export_dir: Path):
     import zipfile
 
     fw_site = (
-        export_dir
-        / "framework-mlx-framework"
-        / "lib"
-        / "python3.11"
-        / "site-packages"
+        export_dir / "framework-mlx-framework" / "lib" / "python3.11" / "site-packages"
     )
     if not fw_site.exists():
         print(f"  ✗ site-packages not found: {fw_site}")
@@ -657,28 +690,29 @@ def _install_spacy_model(export_dir: Path):
 # net in case any future dependency pulls them in transitively.
 _STRIP_PACKAGES = [
     "torch",
-    "sympy",           # torch dep (safety net)
-    "cv2",             # opencv-python, mlx-vlm only uses it for image loading (Pillow suffices)
-    "pyarrow",         # datasets dep
-    "pandas",          # datasets dep
-    "datasets",        # modelscope dep, not used at inference
+    "sympy",  # torch dep (safety net)
+    "cv2",  # opencv-python, mlx-vlm only uses it for image loading (Pillow suffices)
+    "pyarrow",  # datasets dep
+    "pandas",  # datasets dep
+    "datasets",  # modelscope dep, not used at inference
     # dist-info dirs (matched by prefix)
 ]
 
 # Prefixes for dist-info directories to remove alongside the packages above.
 _STRIP_DIST_PREFIXES = [
-    "torch-", "sympy-", "opencv_python-", "pyarrow-", "pandas-", "datasets-",
+    "torch-",
+    "sympy-",
+    "opencv_python-",
+    "pyarrow-",
+    "pandas-",
+    "datasets-",
 ]
 
 
 def _strip_unused_packages(export_dir: Path):
     """Remove large packages not needed for inference from exported framework."""
     fw_site = (
-        export_dir
-        / "framework-mlx-framework"
-        / "lib"
-        / "python3.11"
-        / "site-packages"
+        export_dir / "framework-mlx-framework" / "lib" / "python3.11" / "site-packages"
     )
     if not fw_site.exists():
         return
@@ -688,9 +722,8 @@ def _strip_unused_packages(export_dir: Path):
 
     for item in sorted(fw_site.iterdir()):
         name = item.name
-        should_strip = (
-            name in _STRIP_PACKAGES
-            or any(name.startswith(p) for p in _STRIP_DIST_PREFIXES)
+        should_strip = name in _STRIP_PACKAGES or any(
+            name.startswith(p) for p in _STRIP_DIST_PREFIXES
         )
         if should_strip and item.exists():
             size = sum(f.stat().st_size for f in item.rglob("*") if f.is_file())
@@ -723,7 +756,7 @@ def _create_c_launcher(macos_dir: Path, app_name: str):
     - Shows an error dialog via osascript if startup fails
     """
     launcher_c = macos_dir / "_launcher.c"
-    launcher_c.write_text(r'''
+    launcher_c.write_text(r"""
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -830,13 +863,22 @@ int main(int argc, char *argv[]) {
     int rc = py_bytes_main(3, py_argv);
     return rc;
 }
-''')
+""")
 
     launcher_bin = macos_dir / app_name
     result = subprocess.run(
-        ["cc", "-arch", "arm64", "-mmacosx-version-min=15.0", "-O2",
-         "-o", str(launcher_bin), str(launcher_c)],
-        capture_output=True, text=True,
+        [
+            "cc",
+            "-arch",
+            "arm64",
+            "-mmacosx-version-min=15.0",
+            "-O2",
+            "-o",
+            str(launcher_bin),
+            str(launcher_c),
+        ],
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         print(f"  ✗ Launcher compilation failed: {result.stderr}")
@@ -902,24 +944,32 @@ def create_app_bundle():
     # Copy venvstacks metadata
     venvstacks_meta = EXPORT_DIR / "__venvstacks__"
     if venvstacks_meta.exists():
-        shutil.copytree(venvstacks_meta, frameworks_dir / "__venvstacks__", symlinks=True)
+        shutil.copytree(
+            venvstacks_meta, frameworks_dir / "__venvstacks__", symlinks=True
+        )
 
     # Copy omlx_app to Resources
     print("  Copying omlx_app...")
     omlx_app_src = SCRIPT_DIR / "omlx_app"
     omlx_app_dst = resources_dir / "omlx_app"
-    shutil.copytree(omlx_app_src, omlx_app_dst, ignore=shutil.ignore_patterns(
-        "__pycache__", "*.pyc"
-    ))
+    shutil.copytree(
+        omlx_app_src,
+        omlx_app_dst,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
 
     # Copy omlx package to Resources
     print("  Copying omlx package...")
     omlx_src = SCRIPT_DIR.parent / "omlx"
     omlx_dst = resources_dir / "omlx"
     if omlx_src.exists():
-        shutil.copytree(omlx_src, omlx_dst, ignore=shutil.ignore_patterns(
-            "__pycache__", "*.pyc", ".git", "tests", "examples"
-        ))
+        shutil.copytree(
+            omlx_src,
+            omlx_dst,
+            ignore=shutil.ignore_patterns(
+                "__pycache__", "*.pyc", ".git", "tests", "examples"
+            ),
+        )
 
     # Generate _engine_commits.json for engine SHA display in admin dashboard
     _write_engine_commits(omlx_dst)
@@ -963,14 +1013,14 @@ def create_app_bundle():
     print("  Creating CLI launcher script...")
     cli_launcher = macos_dir / "omlx-cli"
     cli_launcher.write_text(
-        '#!/bin/bash\n'
+        "#!/bin/bash\n"
         'DIR="$(cd "$(dirname "$0")" && pwd)"\n'
         'CONTENTS="$(dirname "$DIR")"\n'
         'LAYERS="$CONTENTS/Frameworks"\n'
         '[ ! -d "$LAYERS" ] && LAYERS="$CONTENTS/Python"\n'
         'export PYTHONHOME="$LAYERS/cpython-3.11"\n'
         'export PYTHONPATH="$CONTENTS/Resources:$LAYERS/app-omlx-app/lib/python3.11/site-packages:$LAYERS/framework-mlx-framework/lib/python3.11/site-packages"\n'
-        'export PYTHONDONTWRITEBYTECODE=1\n'
+        "export PYTHONDONTWRITEBYTECODE=1\n"
         'exec "$DIR/python3" -m omlx.cli "$@"\n'
     )
     cli_launcher.chmod(0o755)
@@ -1024,13 +1074,13 @@ def _create_composite_svg(dark_svg: Path) -> str:
     # Change fill from white to black for white background
     g_element = g_element.replace('fill="#ffffff"', 'fill="#000000"')
 
-    return f'''<?xml version="1.0" encoding="UTF-8"?>
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <rect x="96" y="96" width="832" height="832" rx="186" ry="186" fill="#ffffff"/>
   <svg x="180" y="180" width="664" height="664" viewBox="0 0 497.000000 497.000000">
     {g_element}
   </svg>
-</svg>'''
+</svg>"""
 
 
 def create_placeholder_icon(resources_dir: Path):
@@ -1057,7 +1107,9 @@ def create_placeholder_icon(resources_dir: Path):
     try:
         # Method 1: Use exported runtime Python with AppKit (native macOS SVG rendering)
         runtime_python = EXPORT_DIR / "cpython-3.11" / "bin" / "python3"
-        if runtime_python.exists() and _render_svg_with_appkit(runtime_python, tmp_svg, tmp_png):
+        if runtime_python.exists() and _render_svg_with_appkit(
+            runtime_python, tmp_svg, tmp_png
+        ):
             _png_to_icns(str(tmp_png), icon_path, resources_dir)
             print("    Created app icon from SVG (AppKit)")
         # Method 2: cairosvg
@@ -1110,7 +1162,9 @@ png_data.writeToFile_atomically_("{png_path}", True)
 '''
     runtime_dir = python_exe.parent.parent
     app_sp = EXPORT_DIR / "app-omlx-app" / "lib" / "python3.11" / "site-packages"
-    fw_sp = EXPORT_DIR / "framework-mlx-framework" / "lib" / "python3.11" / "site-packages"
+    fw_sp = (
+        EXPORT_DIR / "framework-mlx-framework" / "lib" / "python3.11" / "site-packages"
+    )
 
     env = os.environ.copy()
     env["PYTHONHOME"] = str(runtime_dir)
@@ -1119,7 +1173,9 @@ png_data.writeToFile_atomically_("{png_path}", True)
     try:
         result = subprocess.run(
             [str(python_exe), "-c", script],
-            capture_output=True, timeout=30, env=env,
+            capture_output=True,
+            timeout=30,
+            env=env,
         )
         if result.returncode != 0:
             print(f"    AppKit stderr: {result.stderr.decode()[:200]}")
@@ -1133,10 +1189,12 @@ def _render_svg_with_cairosvg(svg_content: str, png_path: Path) -> bool:
     """Render SVG to PNG using cairosvg."""
     try:
         import cairosvg
+
         cairosvg.svg2png(
             bytestring=svg_content.encode(),
             write_to=str(png_path),
-            output_width=1024, output_height=1024,
+            output_width=1024,
+            output_height=1024,
         )
         return png_path.exists()
     except ImportError:
@@ -1233,13 +1291,20 @@ def create_dmg(app_dir: Path):
     applications_link.symlink_to("/Applications")
 
     print("  Creating DMG with Applications shortcut...")
-    run_cmd([
-        "hdiutil", "create",
-        "-volname", APP_NAME,
-        "-srcfolder", str(dmg_staging),
-        "-ov", "-format", "UDZO",
-        str(dmg_path)
-    ])
+    run_cmd(
+        [
+            "hdiutil",
+            "create",
+            "-volname",
+            APP_NAME,
+            "-srcfolder",
+            str(dmg_staging),
+            "-ov",
+            "-format",
+            "UDZO",
+            str(dmg_path),
+        ]
+    )
 
     # Cleanup staging
     shutil.rmtree(dmg_staging)
@@ -1250,14 +1315,18 @@ def create_dmg(app_dir: Path):
 
 def main():
     parser = argparse.ArgumentParser(description="Build oMLX macOS app")
-    parser.add_argument("--skip-venv", action="store_true",
-                        help="Skip venvstacks build")
-    parser.add_argument("--dmg-only", action="store_true",
-                        help="Only create DMG from existing build")
-    parser.add_argument("--macos-target",
-                        help="Target macOS version for mlx/mlx-metal wheels "
-                        "(e.g. 26.0). Downloads platform-specific wheels "
-                        "with M5 Neural Accelerator support.")
+    parser.add_argument(
+        "--skip-venv", action="store_true", help="Skip venvstacks build"
+    )
+    parser.add_argument(
+        "--dmg-only", action="store_true", help="Only create DMG from existing build"
+    )
+    parser.add_argument(
+        "--macos-target",
+        help="Target macOS version for mlx/mlx-metal wheels "
+        "(e.g. 26.0). Downloads platform-specific wheels "
+        "with M5 Neural Accelerator support.",
+    )
     args = parser.parse_args()
 
     print(f"Building {APP_NAME} v{VERSION}")

@@ -158,6 +158,7 @@ class TestKVCacheHandlerWithMLX:
         """Import MLX or skip."""
         try:
             import mlx.core as mx
+
             return mx
         except ImportError:
             pytest.skip("MLX not available")
@@ -327,6 +328,7 @@ class TestRotatingKVCacheHandlerWithMLX:
         """Import MLX or skip."""
         try:
             import mlx.core as mx
+
             return mx
         except ImportError:
             pytest.skip("MLX not available")
@@ -651,7 +653,10 @@ class TestCacheTypeRegistry:
         # RotatingKVCache-like
         mock_rotating = MagicMock()
         mock_rotating.__class__.__name__ = "RotatingKVCache"
-        assert CacheTypeRegistry.detect_cache_type(mock_rotating) == CacheType.ROTATING_KVCACHE
+        assert (
+            CacheTypeRegistry.detect_cache_type(mock_rotating)
+            == CacheType.ROTATING_KVCACHE
+        )
 
     def test_detect_cache_type_by_attributes(self):
         """Test detecting cache type by attributes when class name unknown."""
@@ -899,6 +904,7 @@ class TestCacheListHandlerWithMLX:
         """Import MLX or skip."""
         try:
             import mlx.core as mx
+
             return mx
         except ImportError:
             pytest.skip("MLX not available")

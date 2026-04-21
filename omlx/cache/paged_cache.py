@@ -123,6 +123,7 @@ def compute_block_hash(
 # KVCacheBlock - Following vLLM's design
 # =============================================================================
 
+
 @dataclass
 class CacheBlock:
     """
@@ -190,6 +191,7 @@ class CacheBlock:
 # =============================================================================
 # FreeKVCacheBlockQueue - O(1) Doubly Linked List (vLLM style)
 # =============================================================================
+
 
 class FreeKVCacheBlockQueue:
     """
@@ -276,7 +278,9 @@ class FreeKVCacheBlockQueue:
         if n == 0:
             return []
 
-        assert self.num_free_blocks >= n, f"Need {n} blocks, have {self.num_free_blocks}"
+        assert self.num_free_blocks >= n, (
+            f"Need {n} blocks, have {self.num_free_blocks}"
+        )
 
         result = []
         curr = self.fake_head.next_free_block
@@ -375,6 +379,7 @@ class FreeKVCacheBlockQueue:
 # BlockHashToBlockMap - Hash-based prefix cache (vLLM style)
 # =============================================================================
 
+
 class BlockHashToBlockMap:
     """
     Cache mapping block hashes to blocks for prefix caching.
@@ -442,6 +447,7 @@ class BlockHashToBlockMap:
 # BlockTable - Per-request block mapping
 # =============================================================================
 
+
 @dataclass
 class BlockTable:
     """
@@ -480,6 +486,7 @@ class BlockTable:
 # =============================================================================
 # PagedCacheManager - Main manager (vLLM BlockPool style)
 # =============================================================================
+
 
 class PagedCacheManager(CacheManager):
     """
@@ -607,8 +614,7 @@ class PagedCacheManager(CacheManager):
 
             start_id = self._current_allocated_count
             new_blocks = [
-                CacheBlock(block_id=i)
-                for i in range(start_id, start_id + to_create)
+                CacheBlock(block_id=i) for i in range(start_id, start_id + to_create)
             ]
 
             self.blocks.extend(new_blocks)
@@ -638,7 +644,9 @@ class PagedCacheManager(CacheManager):
         with self._lock:
             if self.free_block_queue.num_free_blocks == 0:
                 # Try to grow the block pool dynamically
-                grown = self._grow_blocks(min(256, self.max_blocks - self._current_allocated_count))
+                grown = self._grow_blocks(
+                    min(256, self.max_blocks - self._current_allocated_count)
+                )
                 if grown == 0:
                     logger.warning("Out of cache blocks (max reached)")
                     return None
@@ -715,9 +723,7 @@ class PagedCacheManager(CacheManager):
         if block.block_hash is None:
             return False
 
-        evicted = self.cached_block_hash_to_block.pop(
-            block.block_hash, block.block_id
-        )
+        evicted = self.cached_block_hash_to_block.pop(block.block_hash, block.block_id)
 
         if evicted:
             block.reset_hash()
@@ -747,7 +753,9 @@ class PagedCacheManager(CacheManager):
             if block.ref_count <= 0:
                 # Remove from hash cache
                 if block.block_hash is not None:
-                    self.cached_block_hash_to_block.pop(block.block_hash, block.block_id)
+                    self.cached_block_hash_to_block.pop(
+                        block.block_hash, block.block_id
+                    )
 
                 # Remove from allocated
                 del self.allocated_blocks[block_id]
@@ -785,7 +793,9 @@ class PagedCacheManager(CacheManager):
                 if block.ref_count <= 0:
                     # Remove from hash cache
                     if block.block_hash is not None:
-                        self.cached_block_hash_to_block.pop(block.block_hash, block.block_id)
+                        self.cached_block_hash_to_block.pop(
+                            block.block_hash, block.block_id
+                        )
 
                     del self.allocated_blocks[block.block_id]
                     to_free.append(block)
@@ -942,8 +952,10 @@ class PagedCacheManager(CacheManager):
 
                 # Compute chain hash
                 block_hash = compute_block_hash(
-                    parent_hash, block_tokens,
-                    extra_keys=extra_keys, model_name=self.model_name,
+                    parent_hash,
+                    block_tokens,
+                    extra_keys=extra_keys,
+                    model_name=self.model_name,
                 )
                 block.block_hash = block_hash
                 block.token_count = len(block_tokens)
@@ -993,8 +1005,10 @@ class PagedCacheManager(CacheManager):
 
                 # Compute expected hash
                 block_hash = compute_block_hash(
-                    parent_hash, block_tokens,
-                    extra_keys=block_extra_keys, model_name=self.model_name,
+                    parent_hash,
+                    block_tokens,
+                    extra_keys=block_extra_keys,
+                    model_name=self.model_name,
                 )
 
                 # Look up in cache
@@ -1012,9 +1026,7 @@ class PagedCacheManager(CacheManager):
                             # Cold-registered blocks are metadata-only until a
                             # request claims them via increment_ref().
                             block.ref_count = 0
-                            self.cached_block_hash_to_block.insert(
-                                block_hash, block
-                            )
+                            self.cached_block_hash_to_block.insert(block_hash, block)
                             cached_block = block
 
                 if cached_block is None:
@@ -1054,7 +1066,9 @@ class PagedCacheManager(CacheManager):
 
         with self._lock:
             block_hash = compute_block_hash(
-                parent_hash, tokens, extra_keys=extra_keys,
+                parent_hash,
+                tokens,
+                extra_keys=extra_keys,
                 model_name=self.model_name,
             )
             block = self.cached_block_hash_to_block.get_block(block_hash)
@@ -1087,7 +1101,9 @@ class PagedCacheManager(CacheManager):
 
         with self._lock:
             block_hash = compute_block_hash(
-                parent_hash, tokens, extra_keys=extra_keys,
+                parent_hash,
+                tokens,
+                extra_keys=extra_keys,
                 model_name=self.model_name,
             )
             block.block_hash = block_hash
@@ -1239,9 +1255,7 @@ class PagedCacheManager(CacheManager):
         if source_block.ref_count == 1:
             self.stats.shared_blocks -= 1
 
-        logger.debug(
-            f"COW copy: block {source_block.block_id} -> {new_block.block_id}"
-        )
+        logger.debug(f"COW copy: block {source_block.block_id} -> {new_block.block_id}")
 
         return new_block
 
@@ -1335,7 +1349,8 @@ class PagedCacheManager(CacheManager):
                 "utilization": stats.allocated_blocks / self.max_blocks,
                 "cache_hit_rate": (
                     stats.hits / (stats.hits + stats.misses)
-                    if (stats.hits + stats.misses) > 0 else 0
+                    if (stats.hits + stats.misses) > 0
+                    else 0
                 ),
             }
 
@@ -1383,9 +1398,7 @@ class PagedCacheManager(CacheManager):
             self._current_allocated_count = initial_count
 
             # Recreate blocks and queue with only initial blocks
-            self.blocks = [
-                CacheBlock(block_id=i) for i in range(initial_count)
-            ]
+            self.blocks = [CacheBlock(block_id=i) for i in range(initial_count)]
             self.free_block_queue = FreeKVCacheBlockQueue(self.blocks)
 
             self.cached_block_hash_to_block.clear()
@@ -1594,13 +1607,17 @@ class PagedCacheManager(CacheManager):
             List of blocks with paged SSD data.
         """
         with self._lock:
-            return [b for b in self.blocks if b.block_hash is not None and not b.is_null]
+            return [
+                b for b in self.blocks if b.block_hash is not None and not b.is_null
+            ]
 
     @property
     def cold_block_count(self) -> int:
         """Number of blocks with data on paged SSD."""
         with self._lock:
-            return sum(1 for b in self.blocks if b.block_hash is not None and not b.is_null)
+            return sum(
+                1 for b in self.blocks if b.block_hash is not None and not b.is_null
+            )
 
     def get_ref_count_distribution(self) -> Dict[int, int]:
         """

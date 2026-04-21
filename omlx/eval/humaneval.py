@@ -59,7 +59,10 @@ def _extract_code(response: str, prompt: str) -> str:
         code = match.group(1).strip()
         if "def " in code:
             # Model included full function — prepend imports if missing
-            if imports and not any(line.strip().startswith(("import ", "from ")) for line in code.split("\n")):
+            if imports and not any(
+                line.strip().startswith(("import ", "from "))
+                for line in code.split("\n")
+            ):
                 return imports + "\n\n" + code
             return code
         return prompt + code
@@ -68,7 +71,10 @@ def _extract_code(response: str, prompt: str) -> str:
     if match:
         code = match.group(1).strip()
         if "def " in code:
-            if imports and not any(line.strip().startswith(("import ", "from ")) for line in code.split("\n")):
+            if imports and not any(
+                line.strip().startswith(("import ", "from "))
+                for line in code.split("\n")
+            ):
                 return imports + "\n\n" + code
             return code
         return prompt + code
@@ -89,16 +95,22 @@ def _extract_code(response: str, prompt: str) -> str:
 def _set_resource_limits():
     """Set resource limits for subprocess."""
     try:
-        resource.setrlimit(resource.RLIMIT_AS, (EXEC_MEMORY_LIMIT_BYTES, EXEC_MEMORY_LIMIT_BYTES))
+        resource.setrlimit(
+            resource.RLIMIT_AS, (EXEC_MEMORY_LIMIT_BYTES, EXEC_MEMORY_LIMIT_BYTES)
+        )
     except (ValueError, resource.error):
         pass
     try:
-        resource.setrlimit(resource.RLIMIT_CPU, (EXEC_TIMEOUT_SECONDS + 5, EXEC_TIMEOUT_SECONDS + 5))
+        resource.setrlimit(
+            resource.RLIMIT_CPU, (EXEC_TIMEOUT_SECONDS + 5, EXEC_TIMEOUT_SECONDS + 5)
+        )
     except (ValueError, resource.error):
         pass
 
 
-def _execute_with_tests(code: str, test_code: str, entry_point: str) -> tuple[bool, str]:
+def _execute_with_tests(
+    code: str, test_code: str, entry_point: str
+) -> tuple[bool, str]:
     """Execute generated code with test cases.
 
     Combines the generated function with test assertions and runs in subprocess.
@@ -157,13 +169,15 @@ class HumanEvalBenchmark(BaseBenchmark):
 
         normalized = []
         for item in items:
-            normalized.append({
-                "id": item["task_id"],
-                "prompt": item["prompt"],
-                "test": item["test"],
-                "entry_point": item["entry_point"],
-                "question": item["prompt"],  # for get_question_text
-            })
+            normalized.append(
+                {
+                    "id": item["task_id"],
+                    "prompt": item["prompt"],
+                    "test": item["test"],
+                    "entry_point": item["entry_point"],
+                    "question": item["prompt"],  # for get_question_text
+                }
+            )
 
         logger.info(f"HumanEval: loaded {len(normalized)} problems")
 
@@ -193,7 +207,10 @@ class HumanEvalBenchmark(BaseBenchmark):
 
         # If extracted code has function def but no imports, prepend from prompt
         if "def " in code and imports:
-            if not any(line.strip().startswith(("import ", "from ")) for line in code.split("\n")):
+            if not any(
+                line.strip().startswith(("import ", "from "))
+                for line in code.split("\n")
+            ):
                 return imports + "\n\n" + code
 
         # If no function def found, combine prompt + response body
@@ -233,13 +250,17 @@ class HumanEvalBenchmark(BaseBenchmark):
             batch_time = time.time()
 
             gen_tasks = [
-                self._eval_single(engine, item, batch_start + j, sampling_kwargs, enable_thinking)
+                self._eval_single(
+                    engine, item, batch_start + j, sampling_kwargs, enable_thinking
+                )
                 for j, item in enumerate(batch)
             ]
             gen_results = await asyncio.gather(*gen_tasks)
             gen_elapsed = time.time() - batch_time
 
-            for idx, item, response_text, prompt_text, _raw in sorted(gen_results, key=lambda x: x[0]):
+            for idx, item, response_text, prompt_text, _raw in sorted(
+                gen_results, key=lambda x: x[0]
+            ):
                 code = self.extract_answer(response_text, item)
                 is_correct = self.check_answer(code, item)
 

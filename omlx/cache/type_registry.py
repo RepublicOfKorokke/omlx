@@ -137,7 +137,9 @@ class CacheTypeRegistry:
             ):
                 return CacheType.ARRAYS_CACHE
 
-            logger.debug(f"Could not detect cache type for {class_name}, assuming KVCache")
+            logger.debug(
+                f"Could not detect cache type for {class_name}, assuming KVCache"
+            )
             return CacheType.KVCACHE
 
         return cache_type

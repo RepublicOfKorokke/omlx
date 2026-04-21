@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 class MCPTransport(str, Enum):
     """Supported MCP transport types."""
+
     STDIO = "stdio"
     SSE = "sse"
     STREAMABLE_HTTP = "streamable-http"
@@ -18,6 +19,7 @@ class MCPTransport(str, Enum):
 
 class MCPServerState(str, Enum):
     """MCP server connection states."""
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -53,13 +55,19 @@ class MCPServerConfig:
 
         if self.transport == MCPTransport.STDIO:
             if not self.command:
-                raise ValueError(f"MCP server '{self.name}': stdio transport requires 'command'")
+                raise ValueError(
+                    f"MCP server '{self.name}': stdio transport requires 'command'"
+                )
         elif self.transport == MCPTransport.SSE:
             if not self.url:
-                raise ValueError(f"MCP server '{self.name}': sse transport requires 'url'")
+                raise ValueError(
+                    f"MCP server '{self.name}': sse transport requires 'url'"
+                )
         elif self.transport == MCPTransport.STREAMABLE_HTTP:
             if not self.url:
-                raise ValueError(f"MCP server '{self.name}': streamable-http transport requires 'url'")
+                raise ValueError(
+                    f"MCP server '{self.name}': streamable-http transport requires 'url'"
+                )
 
 
 @dataclass
@@ -107,7 +115,7 @@ class MCPTool:
                 "name": self.full_name,
                 "description": self.description,
                 "parameters": self.input_schema,
-            }
+            },
         }
 
 
@@ -128,6 +136,7 @@ class MCPToolResult:
             content = self.content
         else:
             import json
+
             content = json.dumps(self.content)
 
         return {

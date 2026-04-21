@@ -163,9 +163,9 @@ class OMLXConfig:
 
         # Model settings
         config.model.model_name = os.getenv("OMLX_MODEL", config.model.model_name)
-        config.model.trust_remote_code = os.getenv(
-            "OMLX_TRUST_REMOTE_CODE", "true"
-        ).lower() == "true"
+        config.model.trust_remote_code = (
+            os.getenv("OMLX_TRUST_REMOTE_CODE", "true").lower() == "true"
+        )
 
         # Generation settings
         config.generation.max_tokens = int(
@@ -176,7 +176,9 @@ class OMLXConfig:
         )
 
         # Paged SSD cache settings
-        config.paged_ssd_cache.hot_cache_only = os.getenv("OMLX_HOT_CACHE_ONLY", "false").lower() == "true"
+        config.paged_ssd_cache.hot_cache_only = (
+            os.getenv("OMLX_HOT_CACHE_ONLY", "false").lower() == "true"
+        )
         paged_ssd_dir = os.getenv("OMLX_PAGED_SSD_CACHE_DIR")
         if paged_ssd_dir:
             config.paged_ssd_cache.enabled = True
@@ -192,9 +194,9 @@ class OMLXConfig:
             config.mcp.config_path = mcp_config
 
         # Feature flags
-        config.continuous_batching = os.getenv(
-            "OMLX_CONTINUOUS_BATCHING", "false"
-        ).lower() == "true"
+        config.continuous_batching = (
+            os.getenv("OMLX_CONTINUOUS_BATCHING", "false").lower() == "true"
+        )
 
         return config
 
@@ -263,7 +265,9 @@ class OMLXConfig:
             "cache": asdict(self.cache),
             "paged_ssd_cache": {
                 **asdict(self.paged_ssd_cache),
-                "cache_dir": str(self.paged_ssd_cache.cache_dir) if self.paged_ssd_cache.cache_dir else None,
+                "cache_dir": str(self.paged_ssd_cache.cache_dir)
+                if self.paged_ssd_cache.cache_dir
+                else None,
             },
             "mcp": asdict(self.mcp),
             "continuous_batching": self.continuous_batching,

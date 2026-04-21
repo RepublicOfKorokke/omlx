@@ -53,6 +53,7 @@ def _make_patched_gdn_call(original_call):
     the pattern used by Qwen3NextGatedDeltaNet and all other hybrid
     models in mlx-lm.
     """
+
     def patched_call(
         self,
         inputs: mx.array,

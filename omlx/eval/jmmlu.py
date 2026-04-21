@@ -43,12 +43,14 @@ class JMMLUBenchmark(BaseBenchmark):
         all_items = []
         for item in test_items:
             answer = item.get("answer", "A")
-            all_items.append({
-                "question": item["question"],
-                "choices": item["choices"],
-                "answer": answer,  # Already A/B/C/D
-                "subject": item.get("subject", "unknown"),
-            })
+            all_items.append(
+                {
+                    "question": item["question"],
+                    "choices": item["choices"],
+                    "answer": answer,  # Already A/B/C/D
+                    "subject": item.get("subject", "unknown"),
+                }
+            )
 
         logger.info(f"JMMLU: loaded {len(all_items)} questions")
 

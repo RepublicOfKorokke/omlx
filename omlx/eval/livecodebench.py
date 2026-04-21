@@ -69,11 +69,15 @@ def _extract_code(response: str) -> str:
 def _set_resource_limits():
     """Set resource limits for subprocess. Called via preexec_fn."""
     try:
-        resource.setrlimit(resource.RLIMIT_AS, (EXEC_MEMORY_LIMIT_BYTES, EXEC_MEMORY_LIMIT_BYTES))
+        resource.setrlimit(
+            resource.RLIMIT_AS, (EXEC_MEMORY_LIMIT_BYTES, EXEC_MEMORY_LIMIT_BYTES)
+        )
     except (ValueError, resource.error):
         pass
     try:
-        resource.setrlimit(resource.RLIMIT_CPU, (EXEC_TIMEOUT_SECONDS + 5, EXEC_TIMEOUT_SECONDS + 5))
+        resource.setrlimit(
+            resource.RLIMIT_CPU, (EXEC_TIMEOUT_SECONDS + 5, EXEC_TIMEOUT_SECONDS + 5)
+        )
     except (ValueError, resource.error):
         pass
 
@@ -84,9 +88,7 @@ def _execute_code(code: str, stdin_input: str = "") -> tuple[str, bool, str]:
     Returns:
         (stdout, success, error_message)
     """
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".py", delete=False
-    ) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write(code)
         tmp_path = f.name
 
@@ -149,15 +151,17 @@ class LiveCodeBenchBenchmark(BaseBenchmark):
             if not inputs or not outputs:
                 continue
 
-            normalized.append({
-                "id": item.get("question_id", str(i)),
-                "title": item.get("question_title", f"Problem {i}"),
-                "description": item.get("question_content", ""),
-                "inputs": inputs,
-                "outputs": outputs,
-                "difficulty": item.get("difficulty", ""),
-                "starter_code": item.get("starter_code", ""),
-            })
+            normalized.append(
+                {
+                    "id": item.get("question_id", str(i)),
+                    "title": item.get("question_title", f"Problem {i}"),
+                    "description": item.get("question_content", ""),
+                    "inputs": inputs,
+                    "outputs": outputs,
+                    "difficulty": item.get("difficulty", ""),
+                    "starter_code": item.get("starter_code", ""),
+                }
+            )
 
         logger.info(f"LiveCodeBench: loaded {len(normalized)} problems")
 
@@ -198,7 +202,11 @@ class LiveCodeBenchBenchmark(BaseBenchmark):
 
         for inp, expected_out in zip(inputs, outputs):
             stdin_input = inp if isinstance(inp, str) else str(inp)
-            expected = expected_out.strip() if isinstance(expected_out, str) else str(expected_out).strip()
+            expected = (
+                expected_out.strip()
+                if isinstance(expected_out, str)
+                else str(expected_out).strip()
+            )
 
             stdout, success, error = _execute_code(predicted, stdin_input)
             if not success:
@@ -232,14 +240,18 @@ class LiveCodeBenchBenchmark(BaseBenchmark):
 
             # Batch the generation phase
             gen_tasks = [
-                self._eval_single(engine, item, batch_start + j, sampling_kwargs, enable_thinking)
+                self._eval_single(
+                    engine, item, batch_start + j, sampling_kwargs, enable_thinking
+                )
                 for j, item in enumerate(batch)
             ]
             gen_results = await asyncio.gather(*gen_tasks)
             gen_elapsed = time.time() - batch_time
 
             # Code execution is sequential (subprocess safety)
-            for idx, item, response_text, prompt_text, _raw in sorted(gen_results, key=lambda x: x[0]):
+            for idx, item, response_text, prompt_text, _raw in sorted(
+                gen_results, key=lambda x: x[0]
+            ):
                 code = self.extract_answer(response_text, item)
                 is_correct = self.check_answer(code, item)
 

@@ -246,16 +246,19 @@ class TestCleanSpecialTokens:
 
     def test_preserves_think_tags(self):
         from omlx.api.utils import clean_special_tokens
+
         result = clean_special_tokens("<think>reasoning</think>Answer")
         assert "<think>reasoning</think>Answer" == result
 
     def test_removes_special_tokens(self):
         from omlx.api.utils import clean_special_tokens
+
         result = clean_special_tokens("<|im_end|>Hello<|endoftext|>")
         assert result == "Hello"
 
     def test_removes_special_preserves_think(self):
         from omlx.api.utils import clean_special_tokens
+
         result = clean_special_tokens(
             "<|im_start|><think>reasoning</think>Answer<|im_end|>"
         )
@@ -267,15 +270,18 @@ class TestCleanOutputTextBackwardCompat:
 
     def test_still_removes_thinking(self):
         from omlx.api.utils import clean_output_text
+
         result = clean_output_text("<think>reasoning</think>Answer")
         assert result == "Answer"
 
     def test_still_removes_partial_think(self):
         from omlx.api.utils import clean_output_text
+
         result = clean_output_text("reasoning content</think>Answer")
         assert result == "Answer"
 
     def test_still_removes_special_tokens(self):
         from omlx.api.utils import clean_output_text
+
         result = clean_output_text("<|im_end|>Hello<|endoftext|>")
         assert result == "Hello"

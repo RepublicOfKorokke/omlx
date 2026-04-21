@@ -250,13 +250,16 @@ class TestSSEEventFormat:
             ),
         )
 
-        await _send_event(run, {
-            "type": "progress",
-            "phase": "single",
-            "message": "Testing",
-            "current": 1,
-            "total": 3,
-        })
+        await _send_event(
+            run,
+            {
+                "type": "progress",
+                "phase": "single",
+                "message": "Testing",
+                "current": 1,
+                "total": 3,
+            },
+        )
 
         event = run.queue.get_nowait()
         assert event["type"] == "progress"
@@ -299,16 +302,12 @@ class TestSSEEventFormat:
 class TestDetectQuantization:
     def test_from_config_json(self, tmp_path):
         config = {"quantization_config": {"quant_method": "awq", "bits": 4}}
-        (tmp_path / "config.json").write_text(
-            __import__("json").dumps(config)
-        )
+        (tmp_path / "config.json").write_text(__import__("json").dumps(config))
         assert _detect_quantization(str(tmp_path)) == "4bit"
 
     def test_from_config_json_8bit(self, tmp_path):
         config = {"quantization_config": {"bits": 8}}
-        (tmp_path / "config.json").write_text(
-            __import__("json").dumps(config)
-        )
+        (tmp_path / "config.json").write_text(__import__("json").dumps(config))
         assert _detect_quantization(str(tmp_path)) == "8bit"
 
     def test_from_dirname_4bit(self, tmp_path):
@@ -345,9 +344,7 @@ class TestDetectQuantization:
         model_dir = tmp_path / "Model-4bit"
         model_dir.mkdir()
         config = {"quantization_config": {"bits": 8}}
-        (model_dir / "config.json").write_text(
-            __import__("json").dumps(config)
-        )
+        (model_dir / "config.json").write_text(__import__("json").dumps(config))
         assert _detect_quantization(str(model_dir)) == "8bit"
 
 
@@ -379,7 +376,10 @@ class TestCleanModelName:
         assert _clean_model_name("Qwen3-30B-A3B", "unknown") == "Qwen3-30B-A3B"
 
     def test_preserves_model_size(self):
-        assert _clean_model_name("DeepSeek-R1-0528-Qwen3-8B-4bit", "4bit") == "DeepSeek-R1-0528-Qwen3-8B"
+        assert (
+            _clean_model_name("DeepSeek-R1-0528-Qwen3-8B-4bit", "4bit")
+            == "DeepSeek-R1-0528-Qwen3-8B"
+        )
 
 
 # =============================================================================

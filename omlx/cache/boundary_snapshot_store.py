@@ -65,9 +65,7 @@ class BoundarySnapshotSSDStore:
             try:
                 shutil.rmtree(self._snapshot_dir)
             except Exception as e:
-                logger.warning(
-                    "Failed to clean up orphaned boundary snapshots: %s", e
-                )
+                logger.warning("Failed to clean up orphaned boundary snapshots: %s", e)
         self._snapshot_dir.mkdir(parents=True, exist_ok=True)
 
         # request_id -> {token_count -> file_path}
@@ -156,9 +154,7 @@ class BoundarySnapshotSSDStore:
 
             # 5. Enqueue for background write.
             try:
-                self._write_queue.put_nowait(
-                    (pw_key, tensors_raw, metadata, file_path)
-                )
+                self._write_queue.put_nowait((pw_key, tensors_raw, metadata, file_path))
             except queue.Full:
                 logger.warning(
                     "Boundary snapshot write queue full, snapshot %s/%d "
@@ -221,7 +217,9 @@ class BoundarySnapshotSSDStore:
         except Exception as e:
             logger.debug(
                 "Failed to load boundary snapshot %s/%d: %s",
-                request_id, token_count, e,
+                request_id,
+                token_count,
+                e,
             )
             return None
 
@@ -340,9 +338,7 @@ class BoundarySnapshotSSDStore:
             temp_path = None
             try:
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                temp_path = file_path.with_name(
-                    file_path.stem + "_tmp.safetensors"
-                )
+                temp_path = file_path.with_name(file_path.stem + "_tmp.safetensors")
                 _write_safetensors_no_mx(str(temp_path), tensors_raw, metadata)
 
                 # Request may have been cleaned up while serializing.
@@ -393,7 +389,6 @@ class BoundarySnapshotSSDStore:
                     if file_path.exists():
                         self._pending_writes.pop(pw_key, None)
 
-
     def _serialize_extracted(
         self,
         extracted: List[Dict[str, Any]],
@@ -416,9 +411,7 @@ class BoundarySnapshotSSDStore:
             info: Dict[str, str] = {
                 "class_name": class_name,
                 "cache_type": cache_type,
-                "meta_state": json.dumps(
-                    list(meta_state) if meta_state else []
-                ),
+                "meta_state": json.dumps(list(meta_state) if meta_state else []),
             }
 
             if isinstance(state, (list, tuple)) and len(state) >= 2:
@@ -496,9 +489,7 @@ class BoundarySnapshotSSDStore:
                     raw, dtype_str, shape = tensors_raw[key_0]
                     if f"zero_dim_0" in info:
                         # Restore zero-dim tensor shape.
-                        zd_shape = tuple(
-                            int(d) for d in info["zero_dim_0"].split(",")
-                        )
+                        zd_shape = tuple(int(d) for d in info["zero_dim_0"].split(","))
                         first = _restore_tensor_from_bytes(raw, dtype_str, [1])
                         first = mx.zeros(zd_shape, dtype=first.dtype)
                     else:
@@ -506,29 +497,31 @@ class BoundarySnapshotSSDStore:
                 if key_1 in tensors_raw:
                     raw, dtype_str, shape = tensors_raw[key_1]
                     if f"zero_dim_1" in info:
-                        zd_shape = tuple(
-                            int(d) for d in info["zero_dim_1"].split(",")
-                        )
+                        zd_shape = tuple(int(d) for d in info["zero_dim_1"].split(","))
                         second = _restore_tensor_from_bytes(raw, dtype_str, [1])
                         second = mx.zeros(zd_shape, dtype=second.dtype)
                     else:
                         second = _restore_tensor_from_bytes(raw, dtype_str, shape)
 
                 state = (first, second) if first is not None else ()
-                result.append({
-                    "state": state,
-                    "meta_state": meta_state,
-                    "class_name": class_name,
-                    "cache_type": cache_type,
-                })
+                result.append(
+                    {
+                        "state": state,
+                        "meta_state": meta_state,
+                        "class_name": class_name,
+                        "cache_type": cache_type,
+                    }
+                )
             else:
                 # Placeholder for skipped sliceable layers.
-                result.append({
-                    "state": (),
-                    "meta_state": meta_state,
-                    "class_name": class_name,
-                    "cache_type": cache_type,
-                })
+                result.append(
+                    {
+                        "state": (),
+                        "meta_state": meta_state,
+                        "class_name": class_name,
+                        "cache_type": cache_type,
+                    }
+                )
 
         return result
 
@@ -561,29 +554,29 @@ class BoundarySnapshotSSDStore:
 
                 # Restore zero-dim tensors.
                 if "zero_dim_0" in info and first is not None:
-                    zd_shape = tuple(
-                        int(d) for d in info["zero_dim_0"].split(",")
-                    )
+                    zd_shape = tuple(int(d) for d in info["zero_dim_0"].split(","))
                     first = mx.zeros(zd_shape, dtype=first.dtype)
                 if "zero_dim_1" in info and second is not None:
-                    zd_shape = tuple(
-                        int(d) for d in info["zero_dim_1"].split(",")
-                    )
+                    zd_shape = tuple(int(d) for d in info["zero_dim_1"].split(","))
                     second = mx.zeros(zd_shape, dtype=second.dtype)
 
                 state = (first, second) if first is not None else ()
-                result.append({
-                    "state": state,
-                    "meta_state": meta_state,
-                    "class_name": class_name,
-                    "cache_type": cache_type,
-                })
+                result.append(
+                    {
+                        "state": state,
+                        "meta_state": meta_state,
+                        "class_name": class_name,
+                        "cache_type": cache_type,
+                    }
+                )
             else:
-                result.append({
-                    "state": (),
-                    "meta_state": meta_state,
-                    "class_name": class_name,
-                    "cache_type": cache_type,
-                })
+                result.append(
+                    {
+                        "state": (),
+                        "meta_state": meta_state,
+                        "class_name": class_name,
+                        "cache_type": cache_type,
+                    }
+                )
 
         return result

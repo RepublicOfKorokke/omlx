@@ -243,7 +243,7 @@ class TestAppUpdater:
         assert str(app_path) in script
         assert str(staged) in script
         assert "xattr -rd com.apple.quarantine" in script
-        assert f"open \"{app_path}\"" in script
+        assert f'open "{app_path}"' in script
 
     @patch("omlx_app.updater.AppUpdater.get_app_bundle_path")
     def test_perform_swap_no_staged_app(self, mock_path, tmp_path):
@@ -258,7 +258,13 @@ class TestAppUpdater:
     @patch("omlx_app.updater.AppUpdater.is_writable", return_value=True)
     @patch("omlx_app.updater.AppUpdater.get_app_bundle_path")
     def test_run_full_flow(
-        self, mock_path, mock_writable, mock_download, mock_mount, mock_unmount, tmp_path
+        self,
+        mock_path,
+        mock_writable,
+        mock_download,
+        mock_mount,
+        mock_unmount,
+        tmp_path,
     ):
         """Test the full background update flow."""
         app_path = tmp_path / "oMLX.app"

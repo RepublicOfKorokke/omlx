@@ -126,9 +126,7 @@ class RerankerEngine(BaseNonStreamingEngine):
             self._active_count += 1
         try:
             loop = asyncio.get_running_loop()
-            output = await loop.run_in_executor(
-                get_mlx_executor(), _rerank_sync
-            )
+            output = await loop.run_in_executor(get_mlx_executor(), _rerank_sync)
 
             # Apply top_n filtering if specified
             if top_n is not None and top_n < len(output.indices):

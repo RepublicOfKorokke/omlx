@@ -41,6 +41,7 @@ RIFF_MAGIC = b"RIFF"
 def _make_mock_tts_engine(wav_bytes: bytes = None) -> MagicMock:
     """Build a mock TTSEngine that returns the given WAV bytes."""
     from omlx.engine.tts import TTSEngine
+
     engine = MagicMock(spec=TTSEngine)
     engine.synthesize = AsyncMock(return_value=wav_bytes or DUMMY_WAV)
     return engine
@@ -49,10 +50,12 @@ def _make_mock_tts_engine(wav_bytes: bytes = None) -> MagicMock:
 def _make_mock_pool(tts_engine=None, model_id: str = "qwen3-tts") -> MagicMock:
     pool = MagicMock()
     pool.get_engine = AsyncMock(return_value=tts_engine or _make_mock_tts_engine())
-    pool.get_entry = MagicMock(return_value=MagicMock(
-        model_type="audio_tts",
-        engine_type="tts",
-    ))
+    pool.get_entry = MagicMock(
+        return_value=MagicMock(
+            model_type="audio_tts",
+            engine_type="tts",
+        )
+    )
     pool.get_model_ids.return_value = [model_id]
     pool.preload_pinned_models = AsyncMock()
     pool.check_ttl_expirations = AsyncMock()
@@ -211,6 +214,7 @@ class TestTTSEndpointErrors:
         """Requesting an unknown model returns 4xx."""
         client, mock_pool = server_tts_client
         from omlx.exceptions import ModelNotFoundError
+
         mock_pool.get_engine.side_effect = ModelNotFoundError(
             model_id="nonexistent-tts",
             available_models=["qwen3-tts"],
@@ -337,20 +341,33 @@ class TestTTSVoiceRouting:
         import asyncio
         from omlx.engine.tts import TTSEngine
 
-        def _run(generate_sig_params, voice_value=None, instructions_value=None,
-                 **synth_kwargs):
+        def _run(
+            generate_sig_params,
+            voice_value=None,
+            instructions_value=None,
+            **synth_kwargs,
+        ):
             engine = TTSEngine("test-model")
 
             import inspect
+
             sig_params = {
-                "text": inspect.Parameter("text", inspect.Parameter.POSITIONAL_OR_KEYWORD),
-                "verbose": inspect.Parameter("verbose", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=False),
+                "text": inspect.Parameter(
+                    "text", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                ),
+                "verbose": inspect.Parameter(
+                    "verbose", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=False
+                ),
             }
             for p in generate_sig_params:
-                sig_params[p] = inspect.Parameter(p, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None)
+                sig_params[p] = inspect.Parameter(
+                    p, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None
+                )
 
             generate_mock = MagicMock()
-            generate_mock.__signature__ = inspect.Signature(parameters=list(sig_params.values()))
+            generate_mock.__signature__ = inspect.Signature(
+                parameters=list(sig_params.values())
+            )
             generate_mock.return_value = []  # no audio chunks
 
             # Plain object — hasattr only returns True for explicitly set attrs
@@ -363,10 +380,14 @@ class TestTTSVoiceRouting:
             engine._model = fake_model
 
             try:
-                asyncio.run(engine.synthesize(
-                    "Hello", voice=voice_value, instructions=instructions_value,
-                    **synth_kwargs,
-                ))
+                asyncio.run(
+                    engine.synthesize(
+                        "Hello",
+                        voice=voice_value,
+                        instructions=instructions_value,
+                        **synth_kwargs,
+                    )
+                )
             except RuntimeError:
                 pass  # "no audio output" is expected with empty generate
 
@@ -441,16 +462,29 @@ class TestTTSVoiceClonePassthrough:
             engine = TTSEngine("test-model")
 
             import inspect
+
             sig_params = {
-                "text": inspect.Parameter("text", inspect.Parameter.POSITIONAL_OR_KEYWORD),
-                "verbose": inspect.Parameter("verbose", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=False),
-                "voice": inspect.Parameter("voice", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None),
-                "ref_audio": inspect.Parameter("ref_audio", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None),
-                "ref_text": inspect.Parameter("ref_text", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None),
+                "text": inspect.Parameter(
+                    "text", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                ),
+                "verbose": inspect.Parameter(
+                    "verbose", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=False
+                ),
+                "voice": inspect.Parameter(
+                    "voice", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None
+                ),
+                "ref_audio": inspect.Parameter(
+                    "ref_audio", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None
+                ),
+                "ref_text": inspect.Parameter(
+                    "ref_text", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None
+                ),
             }
 
             generate_mock = MagicMock()
-            generate_mock.__signature__ = inspect.Signature(parameters=list(sig_params.values()))
+            generate_mock.__signature__ = inspect.Signature(
+                parameters=list(sig_params.values())
+            )
             generate_mock.return_value = []
 
             class FakeModel:
@@ -462,9 +496,13 @@ class TestTTSVoiceClonePassthrough:
             engine._model = fake_model
 
             try:
-                asyncio.run(engine.synthesize(
-                    "Hello", ref_audio=ref_audio_path, ref_text=ref_text,
-                ))
+                asyncio.run(
+                    engine.synthesize(
+                        "Hello",
+                        ref_audio=ref_audio_path,
+                        ref_text=ref_text,
+                    )
+                )
             except RuntimeError:
                 pass  # "no audio output" expected
 
@@ -574,16 +612,14 @@ class TestTTSVoiceCloneEndpoint:
         assert response.status_code == 400
         body = response.json()
         # The server wraps errors as {"error": {"message": ...}} or {"detail": ...}
-        message = (
-            body.get("detail")
-            or body.get("error", {}).get("message", "")
-        )
+        message = body.get("detail") or body.get("error", {}).get("message", "")
         assert "base64" in message.lower()
 
     def test_oversized_ref_audio_returns_413(self, clone_client):
         """ref_audio exceeding size limit returns 413."""
         client, _ = clone_client
         from omlx.api.audio_routes import MAX_REF_AUDIO_BASE64_BYTES
+
         # Create a base64 string just over the limit
         huge_b64 = base64.b64encode(b"\x00" * (MAX_REF_AUDIO_BASE64_BYTES)).decode()
         response = client.post(
@@ -614,6 +650,7 @@ class TestTTSVoiceCloneEndpoint:
             ref_path = synthesize.call_args.kwargs.get("ref_audio")
             if ref_path:
                 import os
+
                 assert not os.path.exists(ref_path), "Temp file should be deleted"
 
     def test_ref_audio_without_ref_text_returns_400(self, clone_client):
@@ -629,7 +666,9 @@ class TestTTSVoiceCloneEndpoint:
             },
         )
         assert response.status_code == 400
-        detail = response.json().get("detail") or response.json().get("error", {}).get("message", "")
+        detail = response.json().get("detail") or response.json().get("error", {}).get(
+            "message", ""
+        )
         assert "ref_text" in detail.lower()
 
     def test_no_ref_audio_unchanged_behavior(self, clone_client):
@@ -688,7 +727,13 @@ class TestTTSGenerationParams:
         """None generation params are not included in kwargs."""
         call = _run_synthesize(["voice"])
         kwargs = call.kwargs if call else {}
-        for key in ("temperature", "top_k", "top_p", "repetition_penalty", "max_tokens"):
+        for key in (
+            "temperature",
+            "top_k",
+            "top_p",
+            "repetition_penalty",
+            "max_tokens",
+        ):
             assert key not in kwargs
 
     @pytest.fixture
@@ -701,15 +746,24 @@ class TestTTSGenerationParams:
             engine = TTSEngine("test-model")
 
             import inspect
+
             sig_params = {
-                "text": inspect.Parameter("text", inspect.Parameter.POSITIONAL_OR_KEYWORD),
-                "verbose": inspect.Parameter("verbose", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=False),
+                "text": inspect.Parameter(
+                    "text", inspect.Parameter.POSITIONAL_OR_KEYWORD
+                ),
+                "verbose": inspect.Parameter(
+                    "verbose", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=False
+                ),
             }
             for p in generate_sig_params:
-                sig_params[p] = inspect.Parameter(p, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None)
+                sig_params[p] = inspect.Parameter(
+                    p, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None
+                )
 
             generate_mock = MagicMock()
-            generate_mock.__signature__ = inspect.Signature(parameters=list(sig_params.values()))
+            generate_mock.__signature__ = inspect.Signature(
+                parameters=list(sig_params.values())
+            )
             generate_mock.return_value = []
 
             class FakeModel:
@@ -797,6 +851,7 @@ class TestTTSIntegration:
 
         try:
             import asyncio
+
             engine = TTSEngine(model_name)
             asyncio.run(engine.start())
             result = asyncio.run(engine.synthesize("Hello world", voice="af_heart"))

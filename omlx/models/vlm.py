@@ -184,7 +184,9 @@ class VLMModelAdapter(nn.Module):
     @property
     def model_type(self) -> str:
         """Expose model_type for config access."""
-        if hasattr(self._vlm_model, "config") and hasattr(self._vlm_model.config, "model_type"):
+        if hasattr(self._vlm_model, "config") and hasattr(
+            self._vlm_model.config, "model_type"
+        ):
             return self._vlm_model.config.model_type
         return "vlm"
 
@@ -212,6 +214,7 @@ class VLMModelAdapter(nn.Module):
             return self._language_model.make_cache()
         # Fallback: default KVCache for each layer (matches mlx-lm's make_prompt_cache)
         from mlx_lm.models.cache import KVCache
+
         return [KVCache() for _ in range(len(self.layers))]
 
     def set_pending_embeddings(
@@ -350,14 +353,20 @@ class VLMModelAdapter(nn.Module):
             )
         elif self._pending_embeds is not None:
             # Legacy single-request path
-            result = self._forward_with_embeddings(input_ids, _wrap_caches(cache), **kwargs)
+            result = self._forward_with_embeddings(
+                input_ids, _wrap_caches(cache), **kwargs
+            )
         else:
             # Standard decode/prefill path: token IDs only.
             # Use mlx-lm decode model when available to avoid
             # _IntOffsetCacheProxy overhead (GPU→CPU sync per layer). See #687.
             if self._decode_model is not None and not self._uses_mrope:
                 result = self._decode_model(input_ids, cache=cache, **kwargs)
-            elif self._uses_mrope and self._batch_rope_deltas is not None and cache is not None:
+            elif (
+                self._uses_mrope
+                and self._batch_rope_deltas is not None
+                and cache is not None
+            ):
                 # Per-request mRoPE decode: compute position_ids from
                 # per-request offsets + rope_deltas. The mlx-lm decode
                 # model uses 1D RoPE (cache.offset) which is incompatible
@@ -372,12 +381,13 @@ class VLMModelAdapter(nn.Module):
                         break
                 B, L = input_ids.shape
                 deltas = self._batch_rope_deltas
-                if (offsets is not None and isinstance(offsets, mx.array)
-                        and deltas.size == B):
+                if (
+                    offsets is not None
+                    and isinstance(offsets, mx.array)
+                    and deltas.size == B
+                ):
                     positions = offsets + deltas
-                    position_ids = mx.broadcast_to(
-                        positions[None, :, None], (3, B, L)
-                    )
+                    position_ids = mx.broadcast_to(positions[None, :, None], (3, B, L))
                     result = self._language_model(
                         input_ids, cache=cache, position_ids=position_ids, **kwargs
                     )
@@ -394,7 +404,11 @@ class VLMModelAdapter(nn.Module):
                     # GenerationBatch._step).
                     offsets = None
                     for c in cache:
-                        if hasattr(c, "offset") and isinstance(c.offset, mx.array) and c.offset.ndim > 0:
+                        if (
+                            hasattr(c, "offset")
+                            and isinstance(c.offset, mx.array)
+                            and c.offset.ndim > 0
+                        ):
                             offsets = c.offset
                             break
                     if offsets is not None:
@@ -412,7 +426,9 @@ class VLMModelAdapter(nn.Module):
                 else:
                     if hasattr(self._vlm_model, "_set_position_state"):
                         self._vlm_model._set_position_state(input_ids)
-                    result = self._language_model(input_ids, cache=_wrap_caches(cache), **kwargs)
+                    result = self._language_model(
+                        input_ids, cache=_wrap_caches(cache), **kwargs
+                    )
 
         # mlx-vlm models return LanguageModelOutput(logits=...) but
         # mlx-lm's BatchGenerator expects raw mx.array logits.
@@ -432,7 +448,7 @@ class VLMModelAdapter(nn.Module):
 
         # Slice embeddings for this chunk
         end_offset = min(self._embed_offset + chunk_len, total_len)
-        chunk_embeds = self._pending_embeds[:, self._embed_offset:end_offset, :]
+        chunk_embeds = self._pending_embeds[:, self._embed_offset : end_offset, :]
 
         # If chunk_embeds is shorter than input_ids (last chunk edge case),
         # the language model handles the size mismatch via inputs_embeds taking priority
@@ -453,7 +469,9 @@ class VLMModelAdapter(nn.Module):
 
         return result
 
-    def get_input_embeddings(self, input_ids: mx.array, pixel_values: Optional[mx.array] = None, **kwargs) -> Any:
+    def get_input_embeddings(
+        self, input_ids: mx.array, pixel_values: Optional[mx.array] = None, **kwargs
+    ) -> Any:
         """
         Compute vision+text merged embeddings.
 

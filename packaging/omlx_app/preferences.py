@@ -171,7 +171,9 @@ class PreferencesWindowController(NSObject):
         browse_base_btn.setBezelStyle_(NSBezelStyleRounded)
         browse_base_btn.setFont_(NSFont.systemFontOfSize_(11))
         browse_base_btn.setTarget_(self)
-        browse_base_btn.setAction_(objc.selector(self.browseBaseDir_, signature=b"v@:@"))
+        browse_base_btn.setAction_(
+            objc.selector(self.browseBaseDir_, signature=b"v@:@")
+        )
         server_content.addSubview_(browse_base_btn)
 
         # Separator
@@ -263,9 +265,7 @@ class PreferencesWindowController(NSObject):
         self.api_key_plain.setHidden_(True)
         server_content.addSubview_(self.api_key_plain)
 
-        self._eye_btn = NSButton.alloc().initWithFrame_(
-            NSMakeRect(344, cy - 2, 28, 22)
-        )
+        self._eye_btn = NSButton.alloc().initWithFrame_(NSMakeRect(344, cy - 2, 28, 22))
         self._eye_btn.setBordered_(False)
         eye_icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_(
             "eye", None
@@ -590,9 +590,7 @@ class PreferencesWindowController(NSObject):
 
             base = Path(base_path)
             if base.exists():
-                model_dir = Path(
-                    self.config.get_effective_model_dir()
-                ).resolve()
+                model_dir = Path(self.config.get_effective_model_dir()).resolve()
                 for item in base.iterdir():
                     if item.resolve() == model_dir:
                         continue
@@ -603,9 +601,7 @@ class PreferencesWindowController(NSObject):
                             item.unlink()
                     except OSError as e:
                         logger.error(f"Failed to delete {item}: {e}")
-                logger.info(
-                    f"Reset base directory: {base} (preserved {model_dir})"
-                )
+                logger.info(f"Reset base directory: {base} (preserved {model_dir})")
 
             from .config import ServerConfig
 

@@ -439,8 +439,12 @@ class TestExceptionHierarchy:
         ]
 
         for exc in exceptions_to_test:
-            assert isinstance(exc, OMLXError), f"{type(exc).__name__} should inherit from OMLXError"
-            assert isinstance(exc, Exception), f"{type(exc).__name__} should inherit from Exception"
+            assert isinstance(exc, OMLXError), (
+                f"{type(exc).__name__} should inherit from OMLXError"
+            )
+            assert isinstance(exc, Exception), (
+                f"{type(exc).__name__} should inherit from Exception"
+            )
 
     def test_engine_pool_special_exceptions(self):
         """Test engine pool exceptions that have special constructors."""

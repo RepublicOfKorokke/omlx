@@ -18,7 +18,12 @@ from typing import Dict, List, Optional
 import mlx.core as mx
 import mlx.nn as nn
 
-from .base_model import BaseModelArgs, BaseModelOutput, mean_pooling, normalize_embeddings
+from .base_model import (
+    BaseModelArgs,
+    BaseModelOutput,
+    mean_pooling,
+    normalize_embeddings,
+)
 
 
 @dataclass

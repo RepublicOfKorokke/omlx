@@ -71,7 +71,9 @@ def _flush_pending_tool_calls(
     pending.clear()
 
 
-def _consolidate_system_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _consolidate_system_messages(
+    messages: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     """Move all system messages to the front and merge them into one."""
     system_parts: List[str] = []
     non_system: List[Dict[str, Any]] = []
@@ -173,11 +175,13 @@ def convert_responses_input_to_messages(
                             has_image = True
                             image_url = part.get("image_url", part.get("url", ""))
                             detail = part.get("detail", "auto")
-                            converted_parts.append({
-                                "type": "input_image",
-                                "image_url": image_url,
-                                "detail": detail,
-                            })
+                            converted_parts.append(
+                                {
+                                    "type": "input_image",
+                                    "image_url": image_url,
+                                    "detail": detail,
+                                }
+                            )
                     elif isinstance(part, str):
                         text_parts.append(part)
                         converted_parts.append({"type": "text", "text": part})
@@ -196,14 +200,16 @@ def convert_responses_input_to_messages(
         elif item.type == "function_call":
             # Assistant's tool call — accumulate for grouping
             call_id = item.call_id or item.id or f"call_{uuid.uuid4().hex[:8]}"
-            pending_tool_calls.append({
-                "id": call_id,
-                "type": "function",
-                "function": {
-                    "name": item.name or "",
-                    "arguments": _try_parse_json(item.arguments or "{}"),
-                },
-            })
+            pending_tool_calls.append(
+                {
+                    "id": call_id,
+                    "type": "function",
+                    "function": {
+                        "name": item.name or "",
+                        "arguments": _try_parse_json(item.arguments or "{}"),
+                    },
+                }
+            )
 
         elif item.type == "function_call_output":
             # Flush pending tool calls first
@@ -211,11 +217,13 @@ def convert_responses_input_to_messages(
                 messages, pending_tool_calls, min_merge_index=current_message_start
             )
 
-            messages.append({
-                "role": "tool",
-                "tool_call_id": item.call_id or "",
-                "content": item.output or "",
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": item.call_id or "",
+                    "content": item.output or "",
+                }
+            )
 
     # Flush remaining pending tool calls
     _flush_pending_tool_calls(
@@ -302,9 +310,7 @@ def build_function_call_output_item(
     )
 
 
-def build_response_usage(
-    input_tokens: int, output_tokens: int
-) -> ResponseUsage:
+def build_response_usage(input_tokens: int, output_tokens: int) -> ResponseUsage:
     """Build ResponseUsage from token counts."""
     return ResponseUsage(
         input_tokens=input_tokens,
@@ -374,8 +380,13 @@ class ResponseStore:
         if "public_response" in response_data:
             record = copy.deepcopy(response_data)
             record.setdefault("response_id", response_id)
-            record.setdefault("created_at", record.get("public_response", {}).get("created_at", 0))
-            record.setdefault("previous_response_id", record.get("public_response", {}).get("previous_response_id"))
+            record.setdefault(
+                "created_at", record.get("public_response", {}).get("created_at", 0)
+            )
+            record.setdefault(
+                "previous_response_id",
+                record.get("public_response", {}).get("previous_response_id"),
+            )
             record.setdefault("input_messages", [])
             record.setdefault(
                 "output_messages",
@@ -425,14 +436,18 @@ class ResponseStore:
             try:
                 with path.open("r", encoding="utf-8") as f:
                     raw = json.load(f)
-                response_id = raw.get("response_id") or raw.get("public_response", {}).get("id")
+                response_id = raw.get("response_id") or raw.get(
+                    "public_response", {}
+                ).get("id")
                 if not response_id:
                     raise ValueError("missing response_id")
                 loaded.append(self._normalize_record(response_id, raw))
             except (OSError, ValueError, json.JSONDecodeError) as exc:
                 logger.warning("Skipping corrupt response state file %s: %s", path, exc)
 
-        loaded.sort(key=lambda record: (record.get("created_at", 0), record["response_id"]))
+        loaded.sort(
+            key=lambda record: (record.get("created_at", 0), record["response_id"])
+        )
         for record in loaded:
             self._store[record["response_id"]] = record
         self._evict_oldest()
@@ -533,20 +548,24 @@ def normalize_response_output_to_messages(
             for block in content_blocks:
                 if block.get("type") == "output_text":
                     text_parts.append(block.get("text", ""))
-            messages.append({
-                "role": item.get("role", "assistant"),
-                "content": "\n".join(text_parts),
-            })
+            messages.append(
+                {
+                    "role": item.get("role", "assistant"),
+                    "content": "\n".join(text_parts),
+                }
+            )
         elif item_type == "function_call":
             call_id = item.get("call_id", f"call_{uuid.uuid4().hex[:8]}")
-            pending_tool_calls.append({
-                "id": call_id,
-                "type": "function",
-                "function": {
-                    "name": item.get("name", ""),
-                    "arguments": _try_parse_json(item.get("arguments", "{}")),
-                },
-            })
+            pending_tool_calls.append(
+                {
+                    "id": call_id,
+                    "type": "function",
+                    "function": {
+                        "name": item.get("name", ""),
+                        "arguments": _try_parse_json(item.get("arguments", "{}")),
+                    },
+                }
+            )
 
     _flush_pending_tool_calls(messages, pending_tool_calls)
     return _consolidate_system_messages(messages)

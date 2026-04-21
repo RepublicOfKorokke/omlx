@@ -90,15 +90,17 @@ class ToolExecutor:
         for i, result in enumerate(results):
             call_id = tool_calls[i].get("id", "")
             if isinstance(result, Exception):
-                processed.append((
-                    MCPToolResult(
-                        tool_name=tool_calls[i].get("function", {}).get("name", ""),
-                        content=None,
-                        is_error=True,
-                        error_message=str(result),
-                    ),
-                    call_id,
-                ))
+                processed.append(
+                    (
+                        MCPToolResult(
+                            tool_name=tool_calls[i].get("function", {}).get("name", ""),
+                            content=None,
+                            is_error=True,
+                            error_message=str(result),
+                        ),
+                        call_id,
+                    )
+                )
             else:
                 processed.append(result)
 
@@ -120,15 +122,17 @@ class ToolExecutor:
                 results.append((result, call_id))
             except Exception as e:
                 call_id = tool_call.get("id", "")
-                results.append((
-                    MCPToolResult(
-                        tool_name=tool_call.get("function", {}).get("name", ""),
-                        content=None,
-                        is_error=True,
-                        error_message=str(e),
-                    ),
-                    call_id,
-                ))
+                results.append(
+                    (
+                        MCPToolResult(
+                            tool_name=tool_call.get("function", {}).get("name", ""),
+                            content=None,
+                            is_error=True,
+                            error_message=str(e),
+                        ),
+                        call_id,
+                    )
+                )
         return results
 
     async def execute_and_format(

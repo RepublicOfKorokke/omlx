@@ -407,7 +407,9 @@ def score_tokens(
     return importance, cache
 
 
-def select_chunks(importance: mx.array, keep_pct: float = 0.3, chunk_size: int = 32) -> mx.array:
+def select_chunks(
+    importance: mx.array, keep_pct: float = 0.3, chunk_size: int = 32
+) -> mx.array:
     """Select top-K% token chunks by average importance.
 
     Args:

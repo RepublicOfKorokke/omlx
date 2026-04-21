@@ -73,25 +73,42 @@ class TestUniversalQuantPredicate:
     # Stage 0: Non-quantization (should return False)
 
     def test_moe_router_fp16(self, moe_config, module):
-        result = universal_quant_predicate("model.layers.0.mlp.gate", module, moe_config)
-        assert result is False  # MoE router gates kept fp16 (some models lack to_quantized)
+        result = universal_quant_predicate(
+            "model.layers.0.mlp.gate", module, moe_config
+        )
+        assert (
+            result is False
+        )  # MoE router gates kept fp16 (some models lack to_quantized)
 
     def test_shared_expert_gate_8bit(self, moe_config, module):
-        result = universal_quant_predicate("model.layers.0.shared_expert_gate", module, moe_config)
+        result = universal_quant_predicate(
+            "model.layers.0.shared_expert_gate", module, moe_config
+        )
         assert isinstance(result, dict) and result["bits"] == 8
 
     def test_non_quantizable_module_skipped(self, dense_config, module):
-        cfg = {**dense_config, "_oq_non_quantizable": {
-            "language_model.model.per_layer_model_projection",
-        }}
-        assert universal_quant_predicate(
-            "language_model.model.per_layer_model_projection.weight", module, cfg
-        ) is False
+        cfg = {
+            **dense_config,
+            "_oq_non_quantizable": {
+                "language_model.model.per_layer_model_projection",
+            },
+        }
+        assert (
+            universal_quant_predicate(
+                "language_model.model.per_layer_model_projection.weight", module, cfg
+            )
+            is False
+        )
 
-    def test_non_quantizable_set_does_not_affect_other_paths(self, dense_config, module):
-        cfg = {**dense_config, "_oq_non_quantizable": {
-            "language_model.model.per_layer_model_projection",
-        }}
+    def test_non_quantizable_set_does_not_affect_other_paths(
+        self, dense_config, module
+    ):
+        cfg = {
+            **dense_config,
+            "_oq_non_quantizable": {
+                "language_model.model.per_layer_model_projection",
+            },
+        }
         result = universal_quant_predicate(
             "language_model.model.layers.0.per_layer_input_gate.weight", module, cfg
         )
@@ -105,30 +122,55 @@ class TestUniversalQuantPredicate:
         assert result is not False
 
     def test_vision_encoder_not_quantized(self, dense_config, module):
-        assert universal_quant_predicate("visual.encoder.layers.0.self_attn.q_proj", module, dense_config) is False
+        assert (
+            universal_quant_predicate(
+                "visual.encoder.layers.0.self_attn.q_proj", module, dense_config
+            )
+            is False
+        )
 
     def test_patch_embed_not_quantized(self, dense_config, module):
-        assert universal_quant_predicate("model.patch_embed.proj", module, dense_config) is False
+        assert (
+            universal_quant_predicate("model.patch_embed.proj", module, dense_config)
+            is False
+        )
 
     def test_ssm_alpha_not_quantized(self, dense_config, module):
-        assert universal_quant_predicate("model.layers.0.ssm_alpha", module, dense_config) is False
+        assert (
+            universal_quant_predicate("model.layers.0.ssm_alpha", module, dense_config)
+            is False
+        )
 
     def test_ssm_beta_not_quantized(self, dense_config, module):
-        assert universal_quant_predicate("model.layers.0.ssm_beta", module, dense_config) is False
+        assert (
+            universal_quant_predicate("model.layers.0.ssm_beta", module, dense_config)
+            is False
+        )
 
     def test_a_log_not_quantized(self, dense_config, module):
-        assert universal_quant_predicate("model.layers.0.a_log", module, dense_config) is False
+        assert (
+            universal_quant_predicate("model.layers.0.a_log", module, dense_config)
+            is False
+        )
 
     def test_mamba_d_not_quantized(self, dense_config, module):
-        assert universal_quant_predicate("model.layers.0.mixer.D", module, dense_config) is False
+        assert (
+            universal_quant_predicate("model.layers.0.mixer.D", module, dense_config)
+            is False
+        )
 
     def test_time_decay_not_quantized(self, dense_config, module):
-        assert universal_quant_predicate("model.layers.0.time_decay", module, dense_config) is False
+        assert (
+            universal_quant_predicate("model.layers.0.time_decay", module, dense_config)
+            is False
+        )
 
     # Stage 1: High-precision protection
 
     def test_ssm_output_8bit(self, dense_config, module):
-        result = universal_quant_predicate("model.layers.0.ssm_output", module, dense_config)
+        result = universal_quant_predicate(
+            "model.layers.0.ssm_output", module, dense_config
+        )
         assert isinstance(result, dict)
         assert result["bits"] == 8
 
@@ -138,12 +180,16 @@ class TestUniversalQuantPredicate:
         assert result["bits"] == 6
 
     def test_mla_kv_b_proj_6bit(self, dense_config, module):
-        result = universal_quant_predicate("model.layers.0.self_attn.kv_b_proj", module, dense_config)
+        result = universal_quant_predicate(
+            "model.layers.0.self_attn.kv_b_proj", module, dense_config
+        )
         assert isinstance(result, dict)
         assert result["bits"] == 6
 
     def test_dense_o_proj_5bit(self, dense_config, module):
-        result = universal_quant_predicate("model.layers.5.self_attn.o_proj", module, dense_config)
+        result = universal_quant_predicate(
+            "model.layers.5.self_attn.o_proj", module, dense_config
+        )
         assert isinstance(result, dict)
         assert result["bits"] == 5
 
@@ -235,11 +281,17 @@ class TestUniversalQuantPredicate:
     # Group size
 
     def test_moe_router_fp16_group_size(self, moe_config, module):
-        result = universal_quant_predicate("model.layers.0.mlp.gate", module, moe_config)
+        result = universal_quant_predicate(
+            "model.layers.0.mlp.gate", module, moe_config
+        )
         assert result is False  # MoE router gates kept fp16
 
     def test_150_expert_group_size_128(self, module):
-        config = {"num_hidden_layers": 32, "num_local_experts": 200, "hidden_size": 2048}
+        config = {
+            "num_hidden_layers": 32,
+            "num_local_experts": 200,
+            "hidden_size": 2048,
+        }
         result = universal_quant_predicate(
             "model.layers.10.mlp.gate_proj", module, config
         )
@@ -355,13 +407,19 @@ class TestResolveOutputName:
         assert resolve_output_name("Qwen3.5-122B-A10B", 4) == "Qwen3.5-122B-A10B-oQ4"
 
     def test_strip_existing_bit_suffix(self):
-        assert resolve_output_name("Qwen3.5-122B-A10B-8bit", 4) == "Qwen3.5-122B-A10B-oQ4"
+        assert (
+            resolve_output_name("Qwen3.5-122B-A10B-8bit", 4) == "Qwen3.5-122B-A10B-oQ4"
+        )
 
     def test_strip_existing_oq_suffix(self):
-        assert resolve_output_name("Qwen3.5-122B-A10B-oQ6", 2) == "Qwen3.5-122B-A10B-oQ2"
+        assert (
+            resolve_output_name("Qwen3.5-122B-A10B-oQ6", 2) == "Qwen3.5-122B-A10B-oQ2"
+        )
 
     def test_strip_existing_enhanced_suffix(self):
-        assert resolve_output_name("Qwen3.5-122B-A10B-oQ4e", 2) == "Qwen3.5-122B-A10B-oQ2"
+        assert (
+            resolve_output_name("Qwen3.5-122B-A10B-oQ4e", 2) == "Qwen3.5-122B-A10B-oQ2"
+        )
 
     def test_all_levels(self):
         for level in OQ_LEVELS:
@@ -375,10 +433,7 @@ class TestResolveOutputName:
         assert resolve_output_name("Llama-3-8B", 4, "float16") == "Llama-3-8B-oQ4-fp16"
 
     def test_float16_strips_existing_dtype_suffix(self):
-        assert (
-            resolve_output_name("Model-oQ6-fp16", 4, "float16")
-            == "Model-oQ4-fp16"
-        )
+        assert resolve_output_name("Model-oQ6-fp16", 4, "float16") == "Model-oQ4-fp16"
 
     def test_bfloat16_strips_chained_suffixes(self):
         assert resolve_output_name("Model-oQ6-fp16", 4, "bfloat16") == "Model-oQ4"
@@ -407,11 +462,17 @@ class TestValidateQuantizable:
 
     def test_fp8_native_is_quantizable(self):
         # Native FP8 models (MiniMax, DeepSeek) should be quantizable
-        assert validate_quantizable({"quantization_config": {"quant_method": "fp8"}}) is True
+        assert (
+            validate_quantizable({"quantization_config": {"quant_method": "fp8"}})
+            is True
+        )
 
     def test_non_fp8_quantization_config(self):
         # Other quant methods (gptq, awq) are already quantized
-        assert validate_quantizable({"quantization_config": {"quant_method": "gptq"}}) is False
+        assert (
+            validate_quantizable({"quantization_config": {"quant_method": "gptq"}})
+            is False
+        )
 
 
 # =============================================================================
@@ -444,7 +505,9 @@ class TestMakePredicate:
         config = {
             "num_hidden_layers": 32,
             "_oq_use_budget_plan": True,
-            "_oq_boost_map": {"lm_head": {"bits": 6, "group_size": 64, "mode": "affine"}},
+            "_oq_boost_map": {
+                "lm_head": {"bits": 6, "group_size": 64, "mode": "affine"}
+            },
         }
         pred = make_predicate(config, oq_level=4)
         module = MagicMock(spec=[])
@@ -479,16 +542,30 @@ class TestEstimateMemory:
 
 class TestStreamingHelpers:
     def test_should_quantize_2d_weight(self):
-        assert _should_quantize_tensor("model.layers.0.self_attn.q_proj.weight", (4096, 4096)) is True
+        assert (
+            _should_quantize_tensor(
+                "model.layers.0.self_attn.q_proj.weight", (4096, 4096)
+            )
+            is True
+        )
 
     def test_should_not_quantize_1d(self):
-        assert _should_quantize_tensor("model.layers.0.input_layernorm.weight", (4096,)) is False
+        assert (
+            _should_quantize_tensor("model.layers.0.input_layernorm.weight", (4096,))
+            is False
+        )
 
     def test_should_not_quantize_bias(self):
-        assert _should_quantize_tensor("model.layers.0.self_attn.q_proj.bias", (4096,)) is False
+        assert (
+            _should_quantize_tensor("model.layers.0.self_attn.q_proj.bias", (4096,))
+            is False
+        )
 
     def test_should_not_quantize_norm(self):
-        assert _should_quantize_tensor("model.layers.0.rmsnorm.weight", (4096, 4096)) is False
+        assert (
+            _should_quantize_tensor("model.layers.0.rmsnorm.weight", (4096, 4096))
+            is False
+        )
 
     def test_get_predicate_bits_lm_head(self):
         config = {"num_hidden_layers": 32}
@@ -504,21 +581,27 @@ class TestStreamingHelpers:
 
     def test_get_predicate_bits_default_affine4(self):
         config = {"num_hidden_layers": 32}
-        bits, gs, mode = _get_predicate_bits("model.layers.10.mlp.gate_proj.weight", config, 4, 64)
+        bits, gs, mode = _get_predicate_bits(
+            "model.layers.10.mlp.gate_proj.weight", config, 4, 64
+        )
         assert bits == 4
         assert gs == 64
         assert mode == "affine"
 
     def test_get_predicate_bits_3bit_affine(self):
         config = {"num_hidden_layers": 32}
-        bits, gs, mode = _get_predicate_bits("model.layers.10.mlp.gate_proj.weight", config, 3, 64)
+        bits, gs, mode = _get_predicate_bits(
+            "model.layers.10.mlp.gate_proj.weight", config, 3, 64
+        )
         # oQ3 → base 3-bit → affine
         assert bits == 3
         assert mode == "affine"
 
     def test_get_predicate_bits_8bit(self):
         config = {"num_hidden_layers": 32}
-        bits, gs, mode = _get_predicate_bits("model.layers.10.mlp.gate_proj.weight", config, 8, 64)
+        bits, gs, mode = _get_predicate_bits(
+            "model.layers.10.mlp.gate_proj.weight", config, 8, 64
+        )
         # oQ8 → base 8-bit, always affine mode to minimize kernel combos
         assert bits == 8
         assert gs == 64
@@ -534,7 +617,9 @@ class TestStreamingHelpers:
             "model.layers.1.mlp.up_proj": (14336, 4096),
         }
         config = {"num_hidden_layers": 32, "_oq_use_budget_plan": True}
-        plan = _build_quant_plan(named_shapes, config, 4, target_bpw=4.6, hard_cap_bpw=4.7)
+        plan = _build_quant_plan(
+            named_shapes, config, 4, target_bpw=4.6, hard_cap_bpw=4.7
+        )
         assert plan.effective_bpw <= 4.7
         assert plan.boost_map
 
@@ -603,8 +688,11 @@ class TestLevelBudgetPlan:
         }
         config = {"num_hidden_layers": 32, "_oq_use_budget_plan": True}
         plan = _build_quant_plan(
-            named_shapes, config, oq_level,
-            target_bpw=target, hard_cap_bpw=cap,
+            named_shapes,
+            config,
+            oq_level,
+            target_bpw=target,
+            hard_cap_bpw=cap,
         )
         assert plan.effective_bpw <= cap
 
@@ -704,9 +792,15 @@ class TestLevelBudgetPlan:
             named_shapes[f"model.layers.{i}.self_attn.o_proj"] = (4096, 1024)
         for i in range(n_layers):
             for e in range(n_experts):
-                named_shapes[f"model.layers.{i}.mlp.experts.{e}.down_proj"] = (4096, 1024)
+                named_shapes[f"model.layers.{i}.mlp.experts.{e}.down_proj"] = (
+                    4096,
+                    1024,
+                )
                 named_shapes[f"model.layers.{i}.mlp.experts.{e}.up_proj"] = (1024, 4096)
-                named_shapes[f"model.layers.{i}.mlp.experts.{e}.gate_proj"] = (1024, 4096)
+                named_shapes[f"model.layers.{i}.mlp.experts.{e}.gate_proj"] = (
+                    1024,
+                    4096,
+                )
         sensitivity = {str(i): 0.1 / (i + 1) for i in range(n_layers)}
         config = {
             "num_hidden_layers": n_layers,
@@ -734,11 +828,25 @@ class TestLevelBudgetPlan:
             named_shapes[f"backbone.layers.{i}.mixer.v_proj"] = (1024, 2688)
             named_shapes[f"backbone.layers.{i}.mixer.in_proj"] = (10304, 2688)
             named_shapes[f"backbone.layers.{i}.mixer.out_proj"] = (2688, 4096)
-            named_shapes[f"backbone.layers.{i}.mixer.shared_experts.up_proj"] = (3712, 2688)
-            named_shapes[f"backbone.layers.{i}.mixer.shared_experts.down_proj"] = (2688, 3712)
+            named_shapes[f"backbone.layers.{i}.mixer.shared_experts.up_proj"] = (
+                3712,
+                2688,
+            )
+            named_shapes[f"backbone.layers.{i}.mixer.shared_experts.down_proj"] = (
+                2688,
+                3712,
+            )
         for i in range(n_layers):
-            named_shapes[f"backbone.layers.{i}.mixer.switch_mlp.fc1"] = (128, 1856, 2688)
-            named_shapes[f"backbone.layers.{i}.mixer.switch_mlp.fc2"] = (128, 2688, 1856)
+            named_shapes[f"backbone.layers.{i}.mixer.switch_mlp.fc1"] = (
+                128,
+                1856,
+                2688,
+            )
+            named_shapes[f"backbone.layers.{i}.mixer.switch_mlp.fc2"] = (
+                128,
+                2688,
+                1856,
+            )
         sensitivity = {str(i): 0.1 / (i + 1) for i in range(n_layers)}
         config = {
             "num_hidden_layers": n_layers,
@@ -796,14 +904,17 @@ class TestForwardLayer:
     def test_returns_none_when_all_signatures_fail(self):
         def bad_block(*args, **kwargs):
             raise TypeError("unsupported")
+
         result = _forward_layer(bad_block, mx.ones((2, 4)), None, None)
         assert result is None
 
     @pytest.mark.skipif(not HAS_MLX, reason="MLX not available")
     def test_fallback_signature_with_tuple(self):
         tensor = mx.ones((2, 4, 8))
+
         def block_only_one_arg(x):
             return (x * 3, {"cache": True})
+
         result = _forward_layer(block_only_one_arg, tensor, None, None)
         assert isinstance(result, mx.array)
 
@@ -872,7 +983,8 @@ class TestLazyTensorIndex:
             result = idx[name]
             assert isinstance(result, mx.array)
             np.testing.assert_allclose(
-                np.array(result.astype(mx.float32)), expected.astype(np.float32),
+                np.array(result.astype(mx.float32)),
+                expected.astype(np.float32),
                 atol=1e-3,
             )
 
@@ -1016,9 +1128,15 @@ class TestDiscoverSanitizePlan:
     def sf_file(self, tmp_path):
         path = tmp_path / "weights.safetensors"
         tensors = {
-            "model.layers.0.self_attn.q_proj.weight": np.random.randn(8, 8).astype(np.float16),
-            "model.layers.0.self_attn.k_proj.weight": np.random.randn(4, 8).astype(np.float16),
-            "model.layers.0.mlp.gate_proj.weight": np.random.randn(16, 8).astype(np.float16),
+            "model.layers.0.self_attn.q_proj.weight": np.random.randn(8, 8).astype(
+                np.float16
+            ),
+            "model.layers.0.self_attn.k_proj.weight": np.random.randn(4, 8).astype(
+                np.float16
+            ),
+            "model.layers.0.mlp.gate_proj.weight": np.random.randn(16, 8).astype(
+                np.float16
+            ),
             "model.embed_tokens.weight": np.random.randn(32, 8).astype(np.float16),
         }
         _write_safetensors(str(path), tensors)

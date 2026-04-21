@@ -60,6 +60,7 @@ BATCH_QUESTIONS = [
 # Helper: peak memory tracking
 # ---------------------------------------------------------------------------
 
+
 @contextmanager
 def _track_peak_memory(label: str):
     """Track and print peak GPU memory during a block."""
@@ -87,6 +88,7 @@ def _track_peak_memory(label: str):
 # ---------------------------------------------------------------------------
 # Helper: build prompts
 # ---------------------------------------------------------------------------
+
 
 def _apply_chat_template_as_ids(tokenizer, messages) -> List[int]:
     """Apply chat template and guarantee token IDs are returned."""
@@ -169,14 +171,13 @@ def _build_short_prompts(tokenizer, n: int = 4) -> List[List[int]]:
 # Helper: output quality check
 # ---------------------------------------------------------------------------
 
+
 def _check_output_quality(text: str, label: str):
     """Check that output is coherent, not gibberish."""
     assert len(text.strip()) > 0, f"[{label}] Empty output"
 
     words = text.split()
-    assert len(words) >= 5, (
-        f"[{label}] Too few words ({len(words)}): {text!r}"
-    )
+    assert len(words) >= 5, f"[{label}] Too few words ({len(words)}): {text!r}"
 
     alpha_chars = sum(1 for c in text if c.isalpha())
     alpha_ratio = alpha_chars / max(len(text), 1)
@@ -189,13 +190,14 @@ def _check_output_quality(text: str, label: str):
         if len(set(text[i : i + 20])) == 1:
             pytest.fail(
                 f"[{label}] Excessive single-char repetition: "
-                f"{text[max(0,i-5):i+25]!r}"
+                f"{text[max(0, i - 5) : i + 25]!r}"
             )
 
 
 # ---------------------------------------------------------------------------
 # Helper: test image creation
 # ---------------------------------------------------------------------------
+
 
 def _create_test_image(seed: int = 0, width: int = 336, height: int = 336):
     """Create a test image with a gradient pattern based on seed."""
@@ -213,7 +215,9 @@ def _create_test_image(seed: int = 0, width: int = 336, height: int = 336):
     return img
 
 
-def _create_colored_image(color: Tuple[int, int, int], width: int = 336, height: int = 336):
+def _create_colored_image(
+    color: Tuple[int, int, int], width: int = 336, height: int = 336
+):
     """Create a solid-color image for quality testing."""
     from PIL import Image
 
@@ -223,6 +227,7 @@ def _create_colored_image(color: Tuple[int, int, int], width: int = 336, height:
 # ---------------------------------------------------------------------------
 # Helper: single-request generation
 # ---------------------------------------------------------------------------
+
 
 def _generate_tokens(
     model,
@@ -258,6 +263,7 @@ def _generate_tokens(
 
     if turboquant_bits is not None:
         from omlx.patches.turboquant_attention import apply_turboquant_attention_patch
+
         apply_turboquant_attention_patch()
         scheduler._turboquant_kv_bits = turboquant_bits
 
@@ -305,6 +311,7 @@ def _generate_tokens(
 # Helper: batch generation
 # ---------------------------------------------------------------------------
 
+
 def _generate_batch(
     model,
     tokenizer,
@@ -349,13 +356,16 @@ def _generate_batch(
 
     if turboquant_bits is not None:
         from omlx.patches.turboquant_attention import apply_turboquant_attention_patch
+
         apply_turboquant_attention_patch()
         scheduler._turboquant_kv_bits = turboquant_bits
 
     # Build requests
     # Use repetition_penalty for VLM batch requests to prevent
     # degeneration on synthetic test images with greedy decoding.
-    has_vlm = vlm_embeds_list is not None and any(e[0] is not None for e in vlm_embeds_list)
+    has_vlm = vlm_embeds_list is not None and any(
+        e[0] is not None for e in vlm_embeds_list
+    )
     rep_penalty = 1.1 if has_vlm else 1.0
 
     requests = []
@@ -450,6 +460,7 @@ def _generate_batch(
 # Helper: VLM input preparation
 # ---------------------------------------------------------------------------
 
+
 def _prepare_vlm_inputs(
     vlm_model,
     processor,
@@ -489,7 +500,8 @@ def _prepare_vlm_inputs(
 
     # Tokenize text and preprocess images
     inputs = prepare_inputs(
-        processor, images=images if images else None,
+        processor,
+        images=images if images else None,
         prompts=[prompt] if isinstance(prompt, str) else prompt,
     )
 
@@ -497,9 +509,9 @@ def _prepare_vlm_inputs(
     pixel_values = inputs.get("pixel_values")
     attention_mask = inputs.get("attention_mask")
     extra_model_inputs = {
-        k: v for k, v in inputs.items()
-        if k not in ("input_ids", "attention_mask", "pixel_values")
-        and v is not None
+        k: v
+        for k, v in inputs.items()
+        if k not in ("input_ids", "attention_mask", "pixel_values") and v is not None
     }
 
     if pixel_values is not None and num_images > 0:
@@ -539,6 +551,7 @@ def _prepare_vlm_inputs(
 # Test 1: 9K context cache consistency
 # ---------------------------------------------------------------------------
 
+
 def _test_9k_cache_consistency(model, tokenizer, label: str = "LLM"):
     """Test boundary cache and SSD cache produce consistent outputs."""
     import mlx.core as mx
@@ -552,14 +565,19 @@ def _test_9k_cache_consistency(model, tokenizer, label: str = "LLM"):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_")
     try:
         tokens_on, _ = _generate_tokens(
-            model, tokenizer, prompt_token_ids,
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            model,
+            tokenizer,
+            prompt_token_ids,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
         )
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
     tokens_off, _ = _generate_tokens(
-        model, tokenizer, prompt_token_ids,
+        model,
+        tokenizer,
+        prompt_token_ids,
         ssd_cache_dir=None,
     )
 
@@ -588,18 +606,28 @@ def _test_9k_cache_consistency(model, tokenizer, label: str = "LLM"):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_ssd_")
     try:
         tokens_fresh, cached_fresh = _generate_tokens(
-            model, tokenizer, prompt_token_ids,
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            model,
+            tokenizer,
+            prompt_token_ids,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
         )
         text_fresh = tokenizer.decode(tokens_fresh)
-        print(f"    Fresh  ({len(tokens_fresh)} tokens, cached={cached_fresh}): {text_fresh[:100]}...")
+        print(
+            f"    Fresh  ({len(tokens_fresh)} tokens, cached={cached_fresh}): {text_fresh[:100]}..."
+        )
 
         tokens_cached, cached_count = _generate_tokens(
-            model, tokenizer, prompt_token_ids,
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            model,
+            tokenizer,
+            prompt_token_ids,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
         )
         text_cached = tokenizer.decode(tokens_cached)
-        print(f"    Cached ({len(tokens_cached)} tokens, cached={cached_count}): {text_cached[:100]}...")
+        print(
+            f"    Cached ({len(tokens_cached)} tokens, cached={cached_count}): {text_cached[:100]}..."
+        )
 
         _check_output_quality(text_cached, f"{label} cached")
 
@@ -630,6 +658,7 @@ def _test_9k_cache_consistency(model, tokenizer, label: str = "LLM"):
 # Test 2: 4-request concurrent batching
 # ---------------------------------------------------------------------------
 
+
 def _test_concurrent_batching(model, tokenizer, label: str = "LLM"):
     """Test 4 simultaneous and 4 sequential requests."""
     print(f"\n  [Test 2/{label}] 4-request concurrent batching...")
@@ -641,7 +670,9 @@ def _test_concurrent_batching(model, tokenizer, label: str = "LLM"):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_batch_")
     try:
         results = _generate_batch(
-            model, tokenizer, prompts,
+            model,
+            tokenizer,
+            prompts,
             mode="concurrent",
             ssd_cache_dir=tmp_dir,
         )
@@ -658,7 +689,9 @@ def _test_concurrent_batching(model, tokenizer, label: str = "LLM"):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_seq_")
     try:
         results = _generate_batch(
-            model, tokenizer, prompts,
+            model,
+            tokenizer,
+            prompts,
             mode="sequential",
             ssd_cache_dir=tmp_dir,
         )
@@ -677,6 +710,7 @@ def _test_concurrent_batching(model, tokenizer, label: str = "LLM"):
 # Test 3: TurboQuant 3-bit
 # ---------------------------------------------------------------------------
 
+
 def _test_turboquant(model, tokenizer, label: str = "LLM"):
     """Test TurboQuant 3-bit with cache consistency and batching."""
     print(f"\n  [Test 3/{label}] TurboQuant 3-bit...")
@@ -688,15 +722,20 @@ def _test_turboquant(model, tokenizer, label: str = "LLM"):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_tq_")
     try:
         tokens_tq_on, _ = _generate_tokens(
-            model, tokenizer, prompt_token_ids,
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            model,
+            tokenizer,
+            prompt_token_ids,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
             turboquant_bits=3.0,
         )
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
     tokens_tq_off, _ = _generate_tokens(
-        model, tokenizer, prompt_token_ids,
+        model,
+        tokenizer,
+        prompt_token_ids,
         ssd_cache_dir=None,
         turboquant_bits=3.0,
     )
@@ -714,20 +753,30 @@ def _test_turboquant(model, tokenizer, label: str = "LLM"):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_tq_ssd_")
     try:
         tokens_tq_fresh, _ = _generate_tokens(
-            model, tokenizer, prompt_token_ids,
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            model,
+            tokenizer,
+            prompt_token_ids,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
             turboquant_bits=3.0,
         )
         text_tq_fresh = tokenizer.decode(tokens_tq_fresh)
-        print(f"    TQ Fresh  ({len(tokens_tq_fresh)} tokens): {text_tq_fresh[:100]}...")
+        print(
+            f"    TQ Fresh  ({len(tokens_tq_fresh)} tokens): {text_tq_fresh[:100]}..."
+        )
 
         tokens_tq_cached, cached_count = _generate_tokens(
-            model, tokenizer, prompt_token_ids,
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            model,
+            tokenizer,
+            prompt_token_ids,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
             turboquant_bits=3.0,
         )
         text_tq_cached = tokenizer.decode(tokens_tq_cached)
-        print(f"    TQ Cached ({len(tokens_tq_cached)} tokens, cached={cached_count}): {text_tq_cached[:100]}...")
+        print(
+            f"    TQ Cached ({len(tokens_tq_cached)} tokens, cached={cached_count}): {text_tq_cached[:100]}..."
+        )
 
         _check_output_quality(text_tq_cached, f"{label} TQ cached")
 
@@ -737,7 +786,11 @@ def _test_turboquant(model, tokenizer, label: str = "LLM"):
         else:
             min_len = min(len(tokens_tq_fresh), len(tokens_tq_cached))
             diff_idx = next(
-                (i for i in range(min_len) if tokens_tq_fresh[i] != tokens_tq_cached[i]),
+                (
+                    i
+                    for i in range(min_len)
+                    if tokens_tq_fresh[i] != tokens_tq_cached[i]
+                ),
                 min_len,
             )
             print(f"    TQ SSD token match: DIFFER at position {diff_idx}")
@@ -756,7 +809,9 @@ def _test_turboquant(model, tokenizer, label: str = "LLM"):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_tq_batch_")
     try:
         results = _generate_batch(
-            model, tokenizer, prompts,
+            model,
+            tokenizer,
+            prompts,
             mode="concurrent",
             ssd_cache_dir=tmp_dir,
             turboquant_bits=3.0,
@@ -775,6 +830,7 @@ def _test_turboquant(model, tokenizer, label: str = "LLM"):
 # ---------------------------------------------------------------------------
 # Test 4: VLM engine basics (re-run tests 1-3 on VLMModelAdapter)
 # ---------------------------------------------------------------------------
+
 
 def _test_vlm_engine_basics(adapter, tokenizer):
     """Re-run cache consistency, batching, and TurboQuant on VLM adapter with text-only."""
@@ -795,6 +851,7 @@ def _test_vlm_engine_basics(adapter, tokenizer):
 # ---------------------------------------------------------------------------
 # Test 5: VLM image caching (5K text + image, 3 turns)
 # ---------------------------------------------------------------------------
+
 
 def _test_vlm_image_caching(vlm_model, processor, adapter):
     """Test image caching works across multi-turn VLM conversations."""
@@ -817,54 +874,63 @@ def _test_vlm_image_caching(vlm_model, processor, adapter):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_vlm_cache_")
     try:
         for turn in range(3):
-            print(f"    [Turn {turn+1}] Preparing VLM inputs...")
+            print(f"    [Turn {turn + 1}] Preparing VLM inputs...")
 
             # Build cumulative messages
             messages = [{"role": "system", "content": long_system}]
 
             # Add previous turns
             for prev_turn in range(turn):
-                messages.append({
-                    "role": "user",
-                    "content": f"Describe image {prev_turn+1} in detail."
-                })
-                messages.append({
-                    "role": "assistant",
-                    "content": responses[prev_turn]
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": f"Describe image {prev_turn + 1} in detail.",
+                    }
+                )
+                messages.append({"role": "assistant", "content": responses[prev_turn]})
 
             # Add current turn
-            messages.append({
-                "role": "user",
-                "content": f"Describe image {turn+1} in detail."
-            })
+            messages.append(
+                {"role": "user", "content": f"Describe image {turn + 1} in detail."}
+            )
 
             # Collect all images up to this turn
-            turn_images = images[:turn + 1]
+            turn_images = images[: turn + 1]
 
             token_ids, embeds, extra_kwargs, image_hash = _prepare_vlm_inputs(
                 vlm_model, processor, messages, turn_images
             )
-            print(f"    Turn {turn+1}: {len(token_ids)} tokens, hash={image_hash[:12] if image_hash else 'None'}")
+            print(
+                f"    Turn {turn + 1}: {len(token_ids)} tokens, hash={image_hash[:12] if image_hash else 'None'}"
+            )
 
-            assert embeds is not None, f"Turn {turn+1}: inputs_embeds should not be None"
+            assert embeds is not None, (
+                f"Turn {turn + 1}: inputs_embeds should not be None"
+            )
 
             # Generate
             output_tokens, cached = _generate_tokens(
-                adapter, tokenizer, token_ids,
-                ssd_cache_dir=tmp_dir, block_size=2048,
+                adapter,
+                tokenizer,
+                token_ids,
+                ssd_cache_dir=tmp_dir,
+                block_size=2048,
                 vlm_inputs_embeds=embeds,
                 vlm_extra_kwargs=extra_kwargs,
                 vlm_image_hash=image_hash,
             )
 
             text = tokenizer.decode(output_tokens)
-            print(f"    Turn {turn+1} response ({len(output_tokens)} tokens): {text[:100]}...")
+            print(
+                f"    Turn {turn + 1} response ({len(output_tokens)} tokens): {text[:100]}..."
+            )
             if len(output_tokens) == 0:
-                print(f"    WARNING: Turn {turn+1} produced empty output (model may not support this format)")
+                print(
+                    f"    WARNING: Turn {turn + 1} produced empty output (model may not support this format)"
+                )
                 text = "(empty)"
             else:
-                _check_output_quality(text, f"VLM image cache turn {turn+1}")
+                _check_output_quality(text, f"VLM image cache turn {turn + 1}")
             responses.append(text)
 
         print("    All 3 turns completed")
@@ -878,6 +944,7 @@ def _test_vlm_image_caching(vlm_model, processor, adapter):
 # Test 6: VLM multi-turn image quality
 # ---------------------------------------------------------------------------
 
+
 def _test_vlm_multiturn_quality(vlm_model, processor, adapter):
     """Test coherent responses across 3 multi-turn VLM conversations with images."""
     import mlx.core as mx
@@ -888,9 +955,9 @@ def _test_vlm_multiturn_quality(vlm_model, processor, adapter):
 
     # Create visually distinct colored images
     color_images = [
-        _create_colored_image((255, 0, 0)),    # Red
-        _create_colored_image((0, 0, 255)),    # Blue
-        _create_colored_image((0, 255, 0)),    # Green
+        _create_colored_image((255, 0, 0)),  # Red
+        _create_colored_image((0, 0, 255)),  # Blue
+        _create_colored_image((0, 255, 0)),  # Green
     ]
     color_names = ["red", "blue", "green"]
 
@@ -904,51 +971,64 @@ def _test_vlm_multiturn_quality(vlm_model, processor, adapter):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_vlm_quality_")
     try:
         for turn in range(3):
-            print(f"    [Turn {turn+1}] {color_names[turn]} image...")
+            print(f"    [Turn {turn + 1}] {color_names[turn]} image...")
 
             messages = []
 
             # Add previous turns
             for prev_turn in range(turn):
-                messages.append({
-                    "role": "user",
-                    "content": questions[prev_turn],
-                })
-                messages.append({
-                    "role": "assistant",
-                    "content": responses[prev_turn],
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": questions[prev_turn],
+                    }
+                )
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": responses[prev_turn],
+                    }
+                )
 
             # Add current turn
-            messages.append({
-                "role": "user",
-                "content": questions[turn],
-            })
+            messages.append(
+                {
+                    "role": "user",
+                    "content": questions[turn],
+                }
+            )
 
             # Collect all images up to this turn
-            turn_images = color_images[:turn + 1]
+            turn_images = color_images[: turn + 1]
 
             token_ids, embeds, extra_kwargs, image_hash = _prepare_vlm_inputs(
                 vlm_model, processor, messages, turn_images
             )
 
-            assert embeds is not None, f"Turn {turn+1}: inputs_embeds should not be None"
+            assert embeds is not None, (
+                f"Turn {turn + 1}: inputs_embeds should not be None"
+            )
 
             output_tokens, _ = _generate_tokens(
-                adapter, tokenizer, token_ids,
-                ssd_cache_dir=tmp_dir, block_size=2048,
+                adapter,
+                tokenizer,
+                token_ids,
+                ssd_cache_dir=tmp_dir,
+                block_size=2048,
                 vlm_inputs_embeds=embeds,
                 vlm_extra_kwargs=extra_kwargs,
                 vlm_image_hash=image_hash,
             )
 
             text = tokenizer.decode(output_tokens)
-            print(f"    Turn {turn+1} response: {text[:150]}")
+            print(f"    Turn {turn + 1} response: {text[:150]}")
             if len(output_tokens) == 0:
-                print(f"    WARNING: Turn {turn+1} produced empty output (model may not support this format)")
+                print(
+                    f"    WARNING: Turn {turn + 1} produced empty output (model may not support this format)"
+                )
                 text = "(empty)"
             else:
-                _check_output_quality(text, f"VLM quality turn {turn+1}")
+                _check_output_quality(text, f"VLM quality turn {turn + 1}")
             responses.append(text)
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -960,6 +1040,7 @@ def _test_vlm_multiturn_quality(vlm_model, processor, adapter):
 # ---------------------------------------------------------------------------
 # Test 7: VLM image caching with 4-request batching
 # ---------------------------------------------------------------------------
+
 
 def _test_vlm_image_batch(vlm_model, processor, adapter):
     """Test image caching during concurrent VLM batch processing."""
@@ -995,7 +1076,9 @@ def _test_vlm_image_batch(vlm_model, processor, adapter):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_test_vlm_batch_")
     try:
         results = _generate_batch(
-            adapter, tokenizer, prompt_list,
+            adapter,
+            tokenizer,
+            prompt_list,
             mode="concurrent",
             ssd_cache_dir=tmp_dir,
             vlm_embeds_list=vlm_embeds_list,
@@ -1016,6 +1099,7 @@ def _test_vlm_image_batch(vlm_model, processor, adapter):
 # Main test entry point
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "model_path",
     MODELS,
@@ -1029,15 +1113,15 @@ def test_full_integration(model_path):
         pytest.skip(f"Model not found: {model_path}")
 
     model_name = Path(model_path).name
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Full Integration Test: {model_name}")
     print(f"Path: {model_path}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # ========== Phase 1: LLM engine (mlx-lm) ==========
-    print(f"\n{'='*40}")
+    print(f"\n{'=' * 40}")
     print("Phase 1: LLM engine (mlx-lm)")
-    print(f"{'='*40}")
+    print(f"{'=' * 40}")
 
     from mlx_lm import load
 
@@ -1061,9 +1145,9 @@ def test_full_integration(model_path):
         mx.clear_cache()
 
     # ========== Phase 2: VLM engine (mlx-vlm) ==========
-    print(f"\n{'='*40}")
+    print(f"\n{'=' * 40}")
     print("Phase 2: VLM engine (mlx-vlm)")
-    print(f"{'='*40}")
+    print(f"{'=' * 40}")
 
     from omlx.engine.vlm import _patch_gemma4_vision_tower, _patch_video_processor_bug
     from omlx.models.vlm import VLMModelAdapter
@@ -1073,14 +1157,15 @@ def test_full_integration(model_path):
 
     try:
         from mlx_vlm.utils import load as vlm_load
+
         with _track_peak_memory("VLM model load"):
             vlm_model, processor = vlm_load(model_path)
     except (ValueError, ImportError, Exception) as e:
         print(f"  VLM load failed (model may be text-only LLM): {e}")
         print("  Skipping VLM tests for this model.")
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"LLM TESTS PASSED (VLM skipped): {model_name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         return
 
     # Build weight-sharing decode model (zero-copy from VLM weights)
@@ -1122,6 +1207,6 @@ def test_full_integration(model_path):
         gc.collect()
         mx.clear_cache()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"ALL TESTS PASSED: {model_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")

@@ -1396,7 +1396,6 @@ class TestExtractHarmonyMessages:
         assert isinstance(content, dict)
         assert content["result"] == "success"
 
-
     # -- dict input tests (issue #683) --
 
     def test_simple_dict_message(self):
@@ -1565,10 +1564,16 @@ class TestConsolidateSystemMessages:
     def test_system_message_with_list_content(self):
         """System message with list content should extract text without crashing."""
         msgs = [
-            {"role": "system", "content": [
-                {"type": "text", "text": "Be helpful"},
-                {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
-            ]},
+            {
+                "role": "system",
+                "content": [
+                    {"type": "text", "text": "Be helpful"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
+                ],
+            },
             {"role": "user", "content": "Hello"},
         ]
         result = _consolidate_system_messages(msgs)
@@ -1699,10 +1704,16 @@ class TestMergeConsecutiveRoles:
     def test_merge_list_content_with_string(self):
         """Merging list content (image) with string content should not crash."""
         msgs = [
-            {"role": "user", "content": [
-                {"type": "text", "text": "Look at this"},
-                {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
-            ]},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Look at this"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
+                ],
+            },
             {"role": "user", "content": "What do you think?"},
         ]
         result = _merge_consecutive_roles(msgs)
@@ -1720,10 +1731,16 @@ class TestMergeConsecutiveRoles:
         """String content followed by list content should merge correctly."""
         msgs = [
             {"role": "user", "content": "Context text"},
-            {"role": "user", "content": [
-                {"type": "text", "text": "See image"},
-                {"type": "image_url", "image_url": {"url": "data:image/png;base64,def"}},
-            ]},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "See image"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,def"},
+                    },
+                ],
+            },
         ]
         result = _merge_consecutive_roles(msgs)
         assert len(result) == 1
@@ -1734,12 +1751,24 @@ class TestMergeConsecutiveRoles:
     def test_merge_two_list_contents(self):
         """Two list contents should concatenate."""
         msgs = [
-            {"role": "user", "content": [
-                {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
-            ]},
-            {"role": "user", "content": [
-                {"type": "image_url", "image_url": {"url": "data:image/png;base64,def"}},
-            ]},
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,def"},
+                    },
+                ],
+            },
         ]
         result = _merge_consecutive_roles(msgs)
         assert len(result) == 1
@@ -1751,9 +1780,15 @@ class TestMergeConsecutiveRoles:
         """Empty string + list content should take the list content."""
         msgs = [
             {"role": "user", "content": ""},
-            {"role": "user", "content": [
-                {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
-            ]},
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
+                ],
+            },
         ]
         result = _merge_consecutive_roles(msgs)
         assert len(result) == 1
@@ -1873,7 +1908,10 @@ class TestExtractMultimodalContent:
                     {
                         "type": "image_url",
                         "text": None,
-                        "image_url": {"url": "data:image/png;base64,abc", "detail": "auto"},
+                        "image_url": {
+                            "url": "data:image/png;base64,abc",
+                            "detail": "auto",
+                        },
                     },
                 ],
             )
@@ -1882,24 +1920,34 @@ class TestExtractMultimodalContent:
         content = result[0]["content"]
         assert isinstance(content, list)
         img_part = content[1]
-        assert img_part == {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}
+        assert img_part == {
+            "type": "image_url",
+            "image_url": {"url": "data:image/png;base64,abc"},
+        }
         assert "text" not in img_part
         assert "detail" not in img_part.get("image_url", {})
 
     def test_normalizes_image_url_string_form(self):
         """image_url with string value (not nested dict) should be normalized."""
-        parts = _extract_multimodal_content_list([
-            {"type": "image_url", "image_url": "data:image/png;base64,abc"},
-        ])
+        parts = _extract_multimodal_content_list(
+            [
+                {"type": "image_url", "image_url": "data:image/png;base64,abc"},
+            ]
+        )
         assert len(parts) == 1
-        assert parts[0] == {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}
+        assert parts[0] == {
+            "type": "image_url",
+            "image_url": {"url": "data:image/png;base64,abc"},
+        }
 
     def test_image_url_missing_url_dropped(self):
         """image_url item with no extractable URL should be dropped."""
-        parts = _extract_multimodal_content_list([
-            {"type": "image_url", "image_url": None},
-            {"type": "image_url"},
-        ])
+        parts = _extract_multimodal_content_list(
+            [
+                {"type": "image_url", "image_url": None},
+                {"type": "image_url"},
+            ]
+        )
         assert len(parts) == 0
 
 

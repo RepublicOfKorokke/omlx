@@ -52,13 +52,38 @@ class EngineEntry:
 
     model_id: str  # Directory name (e.g., "llama-3b")
     model_path: str  # Full path to model directory
-    model_type: Literal["llm", "vlm", "embedding", "reranker", "audio_stt", "audio_tts", "audio_sts"]  # Model type
-    engine_type: Literal["batched", "simple", "embedding", "reranker", "vlm", "audio_stt", "audio_tts", "audio_sts"]  # Engine type to use
+    model_type: Literal[
+        "llm", "vlm", "embedding", "reranker", "audio_stt", "audio_tts", "audio_sts"
+    ]  # Model type
+    engine_type: Literal[
+        "batched",
+        "simple",
+        "embedding",
+        "reranker",
+        "vlm",
+        "audio_stt",
+        "audio_tts",
+        "audio_sts",
+    ]  # Engine type to use
     estimated_size: int  # Pre-calculated from safetensors (bytes)
-    config_model_type: str = ""  # Raw model_type from config.json (e.g., "deepseekocr_2")
-    thinking_default: bool | None = None  # True if model thinks by default, False if not, None if unknown
-    preserve_thinking_default: bool | None = None  # True when template supports preserve_thinking (Qwen 3.6+)
-    engine: BaseEngine | EmbeddingEngine | RerankerEngine | STTEngine | STSEngine | TTSEngine | None = None  # Loaded engine instance
+    config_model_type: str = (
+        ""  # Raw model_type from config.json (e.g., "deepseekocr_2")
+    )
+    thinking_default: bool | None = (
+        None  # True if model thinks by default, False if not, None if unknown
+    )
+    preserve_thinking_default: bool | None = (
+        None  # True when template supports preserve_thinking (Qwen 3.6+)
+    )
+    engine: (
+        BaseEngine
+        | EmbeddingEngine
+        | RerankerEngine
+        | STTEngine
+        | STSEngine
+        | TTSEngine
+        | None
+    ) = None  # Loaded engine instance
     last_access: float = 0.0  # Timestamp for LRU (0 if never loaded)
     is_loading: bool = False  # Prevent concurrent loads
     is_pinned: bool = False  # Never evict if True
@@ -159,7 +184,9 @@ class EnginePool:
                     estimated_size=info.estimated_size,
                     config_model_type=getattr(info, "config_model_type", ""),
                     thinking_default=getattr(info, "thinking_default", None),
-                    preserve_thinking_default=getattr(info, "preserve_thinking_default", None),
+                    preserve_thinking_default=getattr(
+                        info, "preserve_thinking_default", None
+                    ),
                     is_pinned=model_id in pinned_set,
                 )
 
@@ -182,10 +209,13 @@ class EnginePool:
             if model_id not in found_models:
                 logger.warning(f"Pinned model not found: {model_id}")
 
-        mem_display = "disabled" if self._max_model_memory is None else format_size(self._max_model_memory)
+        mem_display = (
+            "disabled"
+            if self._max_model_memory is None
+            else format_size(self._max_model_memory)
+        )
         logger.info(
-            f"Discovered {len(self._entries)} models, "
-            f"max memory: {mem_display}"
+            f"Discovered {len(self._entries)} models, max memory: {mem_display}"
         )
 
     _MODEL_TYPE_TO_ENGINE: dict[str, str] = {
@@ -293,8 +323,17 @@ class EnginePool:
         return model_id_or_alias
 
     async def get_engine(
-        self, model_id: str, force_lm: bool = False,
-    ) -> BaseEngine | EmbeddingEngine | RerankerEngine | STTEngine | STSEngine | TTSEngine:
+        self,
+        model_id: str,
+        force_lm: bool = False,
+    ) -> (
+        BaseEngine
+        | EmbeddingEngine
+        | RerankerEngine
+        | STTEngine
+        | STSEngine
+        | TTSEngine
+    ):
         """
         Get or load engine for the specified model.
 
@@ -363,7 +402,10 @@ class EnginePool:
                 except InsufficientMemoryError:
                     # Can't fit with headroom even after evicting everything possible.
                     # Fall back to weights-only if that fits.
-                    if self._current_model_memory + entry.estimated_size <= self._max_model_memory:
+                    if (
+                        self._current_model_memory + entry.estimated_size
+                        <= self._max_model_memory
+                    ):
                         logger.info(
                             f"Loading {model_id} without KV headroom "
                             f"(need {format_size(required_with_headroom)}, "
@@ -455,9 +497,7 @@ class EnginePool:
                 continue
             try:
                 if e.engine.has_active_requests():
-                    logger.debug(
-                        f"Skipping victim '{mid}': has active requests"
-                    )
+                    logger.debug(f"Skipping victim '{mid}': has active requests")
                     continue
             except AttributeError:
                 pass
@@ -612,15 +652,20 @@ class EnginePool:
                 if dflash_enabled and dflash_draft:
                     try:
                         from .engine.dflash import DFlashEngine
+
                         engine = DFlashEngine(
                             model_name=entry.model_path,
                             draft_model_path=dflash_draft,
-                            draft_quant_bits=getattr(model_settings, "dflash_draft_quant_bits", None),
+                            draft_quant_bits=getattr(
+                                model_settings, "dflash_draft_quant_bits", None
+                            ),
                             model_settings=model_settings,
                             fallback_engine_type=effective_type,
                             scheduler_config=self._scheduler_config,
                         )
-                        logger.info(f"DFlash enabled for {model_id}, draft={dflash_draft}")
+                        logger.info(
+                            f"DFlash enabled for {model_id}, draft={dflash_draft}"
+                        )
                     except ImportError:
                         logger.warning(
                             f"DFlash enabled for {model_id} but dflash-mlx is not installed. "
@@ -660,7 +705,9 @@ class EnginePool:
                         model_settings=model_settings,
                     )
 
-            _is_dflash_engine = engine is not None and type(engine).__name__ == "DFlashEngine"
+            _is_dflash_engine = (
+                engine is not None and type(engine).__name__ == "DFlashEngine"
+            )
 
             try:
                 await engine.start()
@@ -758,23 +805,18 @@ class EnginePool:
                     entry.model_type = "llm"
                     entry.engine_type = "batched"
                     logger.info(
-                        f"Successfully loaded {model_id} as LLM "
-                        f"(fallback from VLM)"
+                        f"Successfully loaded {model_id} as LLM (fallback from VLM)"
                     )
                 else:
                     raise
 
             # Check if memory enforcer requested abort during loading
             if entry.abort_loading:
-                logger.warning(
-                    f"Model load aborted by memory enforcer: {model_id}"
-                )
+                logger.warning(f"Model load aborted by memory enforcer: {model_id}")
                 try:
                     await engine.stop()
                 except Exception as e:
-                    logger.warning(
-                        f"Error stopping aborted engine for {model_id}: {e}"
-                    )
+                    logger.warning(f"Error stopping aborted engine for {model_id}: {e}")
                 gc.collect()
                 loop = asyncio.get_running_loop()
                 await loop.run_in_executor(
@@ -782,8 +824,7 @@ class EnginePool:
                     lambda: (mx.synchronize(), mx.clear_cache()),
                 )
                 raise ModelLoadingError(
-                    f"Model {model_id} load aborted: "
-                    f"process memory limit exceeded"
+                    f"Model {model_id} load aborted: process memory limit exceeded"
                 )
 
             entry.engine = engine
@@ -856,7 +897,9 @@ class EnginePool:
             "max_model_memory": self._max_model_memory,
             "current_model_memory": self._current_model_memory,
             "model_count": len(self._entries),
-            "loaded_count": sum(1 for e in self._entries.values() if e.engine is not None),
+            "loaded_count": sum(
+                1 for e in self._entries.values() if e.engine is not None
+            ),
             "models": [
                 {
                     "id": mid,

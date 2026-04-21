@@ -37,14 +37,16 @@ class MMLUProBenchmark(BaseBenchmark):
             labels = item.get("labels", [])
             if not choices or not labels:
                 continue
-            normalized.append({
-                "id": item.get("id", ""),
-                "question": item["question"],
-                "choices": choices,
-                "labels": labels,
-                "answer": item["answer"],
-                "subject": item.get("subject", "general"),
-            })
+            normalized.append(
+                {
+                    "id": item.get("id", ""),
+                    "question": item["question"],
+                    "choices": choices,
+                    "labels": labels,
+                    "answer": item["answer"],
+                    "subject": item.get("subject", "general"),
+                }
+            )
 
         logger.info(f"MMLU-Pro: loaded {len(normalized)} questions")
 
@@ -60,8 +62,7 @@ class MMLUProBenchmark(BaseBenchmark):
         labels = item["labels"]
 
         parts = [
-            "Answer the following question. "
-            "Answer with just the letter.\n",
+            "Answer the following question. Answer with just the letter.\n",
             f"Question: {question}\n",
         ]
         for label, choice in zip(labels, choices):

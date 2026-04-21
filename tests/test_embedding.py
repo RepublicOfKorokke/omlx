@@ -772,8 +772,10 @@ class TestEmbeddingEngine:
 
         engine = EmbeddingEngine("test-model")
 
-        with patch("omlx.engine.embedding.MLXEmbeddingModel") as MockModel, \
-             patch("omlx.engine.embedding.mx") as mock_mx:
+        with (
+            patch("omlx.engine.embedding.MLXEmbeddingModel") as MockModel,
+            patch("omlx.engine.embedding.mx") as mock_mx,
+        ):
             mock_model = MagicMock()
             mock_model.embed.return_value = EmbeddingOutput(
                 embeddings=[[0.1, 0.2]],
@@ -808,9 +810,7 @@ class TestEmbeddingModelsPydantic:
     def test_embedding_response_defaults(self):
         """Test EmbeddingResponse default values."""
         response = EmbeddingResponse(
-            data=[],
-            model="test",
-            usage=EmbeddingUsage(prompt_tokens=0, total_tokens=0)
+            data=[], model="test", usage=EmbeddingUsage(prompt_tokens=0, total_tokens=0)
         )
 
         assert response.object == "list"
@@ -850,6 +850,7 @@ class TestEmbeddingIntegration:
         Skip if mlx-embeddings is not installed.
         """
         import asyncio
+
         pytest.importorskip("mlx_embeddings")
 
         from omlx.engine.embedding import EmbeddingEngine
@@ -890,7 +891,9 @@ class TestNativeEmbeddingLoading:
             self.vocab_size = max(vocab_size, 16)
 
         def encode(self, text: str, add_special_tokens: bool = True):
-            tokens = [abs(hash(token)) % (self.vocab_size - 3) + 3 for token in text.split()]
+            tokens = [
+                abs(hash(token)) % (self.vocab_size - 3) + 3 for token in text.split()
+            ]
             if add_special_tokens:
                 return [101, *tokens, 102]
             return tokens
@@ -905,7 +908,10 @@ class TestNativeEmbeddingLoading:
             return_tensors="np",
         ):
             del truncation, return_tensors
-            encoded = [self.encode(text, add_special_tokens=True)[:max_length] for text in texts]
+            encoded = [
+                self.encode(text, add_special_tokens=True)[:max_length]
+                for text in texts
+            ]
             target_len = max(len(ids) for ids in encoded) if padding and encoded else 0
             input_ids = []
             attention_mask = []
@@ -923,12 +929,15 @@ class TestNativeEmbeddingLoading:
 
         model_config = ModelArgs(**config)
         model = Model(model_config)
-        weights = {name: np.array(value) for name, value in tree_flatten(model.parameters())}
+        weights = {
+            name: np.array(value) for name, value in tree_flatten(model.parameters())
+        }
         save_file(weights, str(tmp_path / "model.safetensors"))
 
     def test_load_native_bert_model(self, tmp_path):
         """Test native loading of BERT embedding model."""
         import sys
+
         sys.path.insert(0, str(Path(__file__).parent.parent))
         from safetensors.numpy import save_file
 
@@ -958,16 +967,20 @@ class TestNativeEmbeddingLoading:
 
         model = MLXEmbeddingModel(str(tmp_path))
         tokenizer = self.MockNativeTokenizer(vocab_size=vocab_size)
-        with patch(
-            "transformers.AutoTokenizer.from_pretrained",
-            return_value=tokenizer,
-        ) as mock_from_pretrained, patch(
-            "omlx.models.embedding.MLXEmbeddingModel._validate_native_weights",
-            return_value=None,
-        ) as mock_validate_weights, patch(
-            "omlx.models.xlm_roberta.Model.load_weights",
-            return_value=None,
-        ) as mock_load_weights:
+        with (
+            patch(
+                "transformers.AutoTokenizer.from_pretrained",
+                return_value=tokenizer,
+            ) as mock_from_pretrained,
+            patch(
+                "omlx.models.embedding.MLXEmbeddingModel._validate_native_weights",
+                return_value=None,
+            ) as mock_validate_weights,
+            patch(
+                "omlx.models.xlm_roberta.Model.load_weights",
+                return_value=None,
+            ) as mock_load_weights,
+        ):
             result = model._load_native()
 
         assert result is True
@@ -980,6 +993,7 @@ class TestNativeEmbeddingLoading:
     def test_load_native_xlm_roberta_model(self, tmp_path):
         """Test native loading of XLMRoBERTa embedding model."""
         import sys
+
         sys.path.insert(0, str(Path(__file__).parent.parent))
         from safetensors.numpy import save_file
 
@@ -1008,16 +1022,20 @@ class TestNativeEmbeddingLoading:
 
         model = MLXEmbeddingModel(str(tmp_path))
         tokenizer = self.MockNativeTokenizer(vocab_size=vocab_size)
-        with patch(
-            "transformers.AutoTokenizer.from_pretrained",
-            return_value=tokenizer,
-        ) as mock_from_pretrained, patch(
-            "omlx.models.embedding.MLXEmbeddingModel._validate_native_weights",
-            return_value=None,
-        ) as mock_validate_weights, patch(
-            "omlx.models.xlm_roberta.Model.load_weights",
-            return_value=None,
-        ) as mock_load_weights:
+        with (
+            patch(
+                "transformers.AutoTokenizer.from_pretrained",
+                return_value=tokenizer,
+            ) as mock_from_pretrained,
+            patch(
+                "omlx.models.embedding.MLXEmbeddingModel._validate_native_weights",
+                return_value=None,
+            ) as mock_validate_weights,
+            patch(
+                "omlx.models.xlm_roberta.Model.load_weights",
+                return_value=None,
+            ) as mock_load_weights,
+        ):
             result = model._load_native()
 
         assert result is True
@@ -1047,7 +1065,11 @@ class TestNativeEmbeddingLoading:
         (tmp_path / "config.json").write_text(json.dumps(config))
 
         save_file(
-            {"embeddings.word_embeddings.weight": np.random.randn(30522, 384).astype(np.float32)},
+            {
+                "embeddings.word_embeddings.weight": np.random.randn(30522, 384).astype(
+                    np.float32
+                )
+            },
             str(tmp_path / "model.safetensors"),
         )
 
@@ -1093,9 +1115,9 @@ class TestNativeEmbeddingLoading:
             for key in f.keys():
                 weights[key] = np.array(f.get_tensor(key))
 
-        weights["embeddings.word_embeddings.weight"] = np.random.randn(30523, 384).astype(
-            np.float32
-        )
+        weights["embeddings.word_embeddings.weight"] = np.random.randn(
+            30523, 384
+        ).astype(np.float32)
         save_file(weights, str(tmp_path / "model.safetensors"))
 
         from omlx.models.embedding import MLXEmbeddingModel
@@ -1114,6 +1136,7 @@ class TestNativeEmbeddingLoading:
     def test_load_native_falls_back_for_unknown_arch(self, tmp_path):
         """Test that native loading returns False for unsupported architectures."""
         import sys
+
         sys.path.insert(0, str(Path(__file__).parent.parent))
 
         # Create config with unknown embedding architecture
@@ -1134,6 +1157,7 @@ class TestNativeEmbeddingLoading:
     def test_embed_produces_normalized_vectors(self, tmp_path):
         """Test that embed produces L2-normalized embedding vectors."""
         import sys, math
+
         sys.path.insert(0, str(Path(__file__).parent.parent))
 
         config = {

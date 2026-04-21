@@ -45,6 +45,7 @@ RIFF_MAGIC = b"RIFF"
 def _make_mock_sts_engine(output_wav: bytes = None) -> MagicMock:
     """Build a mock STSEngine that returns the given WAV bytes."""
     from omlx.engine.sts import STSEngine
+
     engine = MagicMock(spec=STSEngine)
     engine.process = AsyncMock(return_value=output_wav or TINY_WAV)
     return engine
@@ -54,10 +55,12 @@ def _make_mock_pool(sts_engine=None, model_id: str = "deepfilternet") -> MagicMo
     """Build a mock EnginePool that returns the given STS engine."""
     pool = MagicMock()
     pool.get_engine = AsyncMock(return_value=sts_engine or _make_mock_sts_engine())
-    pool.get_entry = MagicMock(return_value=MagicMock(
-        model_type="audio_sts",
-        engine_type="audio_sts",
-    ))
+    pool.get_entry = MagicMock(
+        return_value=MagicMock(
+            model_type="audio_sts",
+            engine_type="audio_sts",
+        )
+    )
     pool.get_model_ids.return_value = [model_id]
     pool.preload_pinned_models = AsyncMock()
     pool.check_ttl_expirations = AsyncMock()
@@ -236,6 +239,7 @@ class TestSTSEndpointErrors:
         """Requesting an unknown model returns 404."""
         client, mock_pool = server_sts_client
         from omlx.exceptions import ModelNotFoundError
+
         mock_pool.get_engine.side_effect = ModelNotFoundError(
             model_id="nonexistent-sts",
             available_models=["deepfilternet"],
@@ -276,9 +280,7 @@ class TestSTSModelAliasResolution:
         _ensure_audio_routes(app)
 
         mock_pool = _make_mock_pool(model_id="MossFormer2-SE")
-        mock_pool.resolve_model_id = MagicMock(
-            return_value="MossFormer2-SE"
-        )
+        mock_pool.resolve_model_id = MagicMock(return_value="MossFormer2-SE")
 
         with patch("omlx.server._server_state") as mock_state:
             mock_state.engine_pool = mock_pool
@@ -305,9 +307,7 @@ class TestSTSModelAliasResolution:
         _ensure_audio_routes(app)
 
         mock_pool = _make_mock_pool(model_id="MossFormer2-SE")
-        mock_pool.resolve_model_id = MagicMock(
-            return_value="MossFormer2-SE"
-        )
+        mock_pool.resolve_model_id = MagicMock(return_value="MossFormer2-SE")
 
         with patch("omlx.server._server_state") as mock_state:
             mock_state.engine_pool = mock_pool
@@ -339,17 +339,20 @@ class TestSTSEngineUnit:
     def test_import(self):
         """STSEngine can be imported."""
         from omlx.engine.sts import STSEngine
+
         assert STSEngine is not None
 
     def test_init(self):
         """STSEngine can be instantiated."""
         from omlx.engine.sts import STSEngine
+
         engine = STSEngine("mlx-community/DeepFilterNet-mlx")
         assert engine.model_name == "mlx-community/DeepFilterNet-mlx"
 
     def test_get_stats_not_loaded(self):
         """get_stats() returns loaded=False when not started."""
         from omlx.engine.sts import STSEngine
+
         engine = STSEngine("test-sts-model")
         stats = engine.get_stats()
         assert stats["loaded"] is False
@@ -358,6 +361,7 @@ class TestSTSEngineUnit:
     def test_repr(self):
         """__repr__ shows stopped status before start()."""
         from omlx.engine.sts import STSEngine
+
         engine = STSEngine("my-model")
         r = repr(engine)
         assert "stopped" in r
@@ -366,35 +370,41 @@ class TestSTSEngineUnit:
     def test_family_detection_deepfilternet(self):
         """Family is detected as deepfilternet for matching model name."""
         from omlx.engine.sts import _detect_sts_family
+
         assert _detect_sts_family("deepfilternet3") == "deepfilternet"
         assert _detect_sts_family("mlx-community/DeepFilterNet-mlx") == "deepfilternet"
 
     def test_family_detection_mossformer2(self):
         """Family is detected as mossformer2."""
         from omlx.engine.sts import _detect_sts_family
+
         assert _detect_sts_family("MossFormer2-SE-48K") == "mossformer2"
         assert _detect_sts_family("starkdmi/MossFormer2-SE") == "mossformer2"
 
     def test_family_detection_sam_audio(self):
         """Family is detected as sam_audio."""
         from omlx.engine.sts import _detect_sts_family
+
         assert _detect_sts_family("mlx-community/sam-audio-base-fp16") == "sam_audio"
 
     def test_family_detection_lfm2(self):
         """Family is detected as lfm2."""
         from omlx.engine.sts import _detect_sts_family
+
         assert _detect_sts_family("mlx-community/LFM2.5-Audio-1B") == "lfm2"
         assert _detect_sts_family("mlx-community/LFM2.5-Audio-1.5B-6bit") == "lfm2"
 
     def test_family_detection_generic(self):
         """Unknown model name returns 'generic'."""
         from omlx.engine.sts import _detect_sts_family
+
         assert _detect_sts_family("some-unknown-audio-model") == "generic"
 
     def test_process_raises_if_not_started(self):
         """process() raises RuntimeError if engine not started."""
         import asyncio
         from omlx.engine.sts import STSEngine
+
         engine = STSEngine("test-model")
         with pytest.raises(RuntimeError, match="not started"):
             asyncio.run(engine.process("/tmp/fake.wav"))
@@ -402,6 +412,7 @@ class TestSTSEngineUnit:
     def test_get_stats_has_family(self):
         """get_stats() includes 'family' key."""
         from omlx.engine.sts import STSEngine
+
         engine = STSEngine("mlx-community/sam-audio-base-fp16")
         stats = engine.get_stats()
         assert "family" in stats
@@ -411,6 +422,7 @@ class TestSTSEngineUnit:
         """start() raises ValueError for unsupported 'generic' family."""
         import asyncio
         from omlx.engine.sts import STSEngine
+
         engine = STSEngine("unknown-model-xyz")
         with pytest.raises(ValueError, match="Unsupported STS model family"):
             asyncio.run(engine.start())
@@ -427,12 +439,14 @@ class TestSTSModelRequest:
     def test_audio_process_request_model(self):
         """AudioProcessRequest accepts a model field."""
         from omlx.api.audio_models import AudioProcessRequest
+
         req = AudioProcessRequest(model="deepfilternet")
         assert req.model == "deepfilternet"
 
     def test_audio_process_request_requires_model(self):
         """AudioProcessRequest raises ValidationError without model."""
         from omlx.api.audio_models import AudioProcessRequest
+
         with pytest.raises(Exception):  # pydantic ValidationError
             AudioProcessRequest()
 
@@ -512,9 +526,7 @@ class TestSTSIntegrationSAMAudio:
         try:
             engine = STSEngine(model_name)
             asyncio.run(engine.start())
-            result = asyncio.run(engine.process(
-                str(wav_path), descriptions=["speech"]
-            ))
+            result = asyncio.run(engine.process(str(wav_path), descriptions=["speech"]))
             assert isinstance(result, bytes)
             assert result[:4] == RIFF_MAGIC
             asyncio.run(engine.stop())
@@ -540,9 +552,7 @@ class TestSTSIntegrationLFM2:
         try:
             engine = STSEngine(model_name)
             asyncio.run(engine.start())
-            result = asyncio.run(engine.process(
-                str(wav_path), max_new_tokens=64
-            ))
+            result = asyncio.run(engine.process(str(wav_path), max_new_tokens=64))
             assert isinstance(result, bytes)
             assert result[:4] == RIFF_MAGIC
             asyncio.run(engine.stop())

@@ -82,32 +82,52 @@ class ModelSettings:
     force_sampling: bool = False
     max_tool_result_tokens: Optional[int] = None
     chat_template_kwargs: Optional[Dict[str, Any]] = None
-    forced_ct_kwargs: Optional[list[str]] = None  # Keys that cannot be overridden by API requests
+    forced_ct_kwargs: Optional[list[str]] = (
+        None  # Keys that cannot be overridden by API requests
+    )
     ttl_seconds: Optional[int] = None  # Auto-unload after idle seconds (None = no TTL)
-    model_type_override: Optional[str] = None  # "llm", "vlm", "embedding", "reranker", or None (auto-detect)
-    model_alias: Optional[str] = None  # API-visible name (alternative to directory name)
-    index_cache_freq: Optional[int] = None  # IndexCache: every Nth layer keeps indexer (DSA models only)
-    enable_thinking: Optional[bool] = None  # Explicit toggle for thinking/reasoning mode (None = auto)
-    preserve_thinking: Optional[bool] = None  # Keep <think> blocks in historical turns (None = auto, True when template supports it)
+    model_type_override: Optional[str] = (
+        None  # "llm", "vlm", "embedding", "reranker", or None (auto-detect)
+    )
+    model_alias: Optional[str] = (
+        None  # API-visible name (alternative to directory name)
+    )
+    index_cache_freq: Optional[int] = (
+        None  # IndexCache: every Nth layer keeps indexer (DSA models only)
+    )
+    enable_thinking: Optional[bool] = (
+        None  # Explicit toggle for thinking/reasoning mode (None = auto)
+    )
+    preserve_thinking: Optional[bool] = (
+        None  # Keep <think> blocks in historical turns (None = auto, True when template supports it)
+    )
     thinking_budget_enabled: bool = False
     thinking_budget_tokens: Optional[int] = None
-    reasoning_parser: Optional[str] = None  # xgrammar builtin name: "qwen", "harmony", "llama", etc.
+    reasoning_parser: Optional[str] = (
+        None  # xgrammar builtin name: "qwen", "harmony", "llama", etc.
+    )
 
     # TurboQuant KV cache (mlx-vlm backend)
     turboquant_kv_enabled: bool = False
     turboquant_kv_bits: float = 4  # 2, 2.5, 3, 3.5, 4, 6, 8
-    turboquant_skip_last: bool = True  # Skip last KVCache layer (prevents corruption on sensitive models)
+    turboquant_skip_last: bool = (
+        True  # Skip last KVCache layer (prevents corruption on sensitive models)
+    )
 
     # SpecPrefill (experimental: attention-based sparse prefill for MoE models)
     specprefill_enabled: bool = False
-    specprefill_draft_model: Optional[str] = None  # Path to draft model (must share tokenizer)
+    specprefill_draft_model: Optional[str] = (
+        None  # Path to draft model (must share tokenizer)
+    )
     specprefill_keep_pct: Optional[float] = None  # Keep rate (0.1-0.5, default 0.2)
     specprefill_threshold: Optional[int] = None  # Min tokens to trigger (default 8192)
 
     # DFlash (block diffusion speculative decoding)
     dflash_enabled: bool = False
     dflash_draft_model: Optional[str] = None  # Path/repo for DFlash draft checkpoint
-    dflash_draft_quant_bits: Optional[int] = None  # Draft model quantization (None=bf16, 4)
+    dflash_draft_quant_bits: Optional[int] = (
+        None  # Draft model quantization (None=bf16, 4)
+    )
 
     # Model management flags
     is_pinned: bool = False
@@ -236,7 +256,7 @@ class ModelSettingsManager:
             "models": {
                 model_id: settings.to_dict()
                 for model_id, settings in self._settings.items()
-            }
+            },
         }
 
         try:
@@ -391,7 +411,9 @@ class ModelSettingsManager:
         with self._lock:
             per_model = self._profiles.setdefault(model_id, {})
             if name in per_model:
-                raise ValueError(f"Profile '{name}' already exists for model '{model_id}'")
+                raise ValueError(
+                    f"Profile '{name}' already exists for model '{model_id}'"
+                )
             now = utcnow().isoformat()
             per_model[name] = {
                 "name": name,

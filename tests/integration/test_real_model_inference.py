@@ -35,7 +35,7 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.skipif(
         sys.platform != "darwin",
-        reason="Real model tests require macOS with Apple Silicon"
+        reason="Real model tests require macOS with Apple Silicon",
     ),
 ]
 
@@ -218,9 +218,7 @@ class TestMLXLanguageModel:
         model = MLXLanguageModel(str(test_model_path))
         model.load()
 
-        messages = [
-            {"role": "user", "content": "What is 2 + 2?"}
-        ]
+        messages = [{"role": "user", "content": "What is 2 + 2?"}]
 
         output = model.chat(
             messages=messages,
@@ -255,7 +253,7 @@ class TestMLXLanguageModel:
             chunks.append(output.text)
             # Each chunk should be valid UTF-8
             try:
-                output.text.encode('utf-8')
+                output.text.encode("utf-8")
             except UnicodeEncodeError:
                 pytest.fail(f"Invalid UTF-8 in chunk: {output.text!r}")
 
@@ -493,10 +491,12 @@ class TestTokenizerIntegration:
         _, tokenizer = load(str(test_model_path))
 
         # Check EOS token exists
-        assert hasattr(tokenizer, 'eos_token_id') or hasattr(tokenizer, 'eos_token')
+        assert hasattr(tokenizer, "eos_token_id") or hasattr(tokenizer, "eos_token")
 
         # Check vocab size
-        vocab_size = len(tokenizer) if hasattr(tokenizer, '__len__') else tokenizer.vocab_size
+        vocab_size = (
+            len(tokenizer) if hasattr(tokenizer, "__len__") else tokenizer.vocab_size
+        )
         assert vocab_size > 0
 
     def test_chat_template_application(self, test_model_path: Path):
@@ -511,7 +511,7 @@ class TestTokenizerIntegration:
             {"role": "user", "content": "How are you?"},
         ]
 
-        if hasattr(tokenizer, 'apply_chat_template'):
+        if hasattr(tokenizer, "apply_chat_template"):
             try:
                 formatted = tokenizer.apply_chat_template(
                     messages,

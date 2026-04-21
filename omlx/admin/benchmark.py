@@ -43,6 +43,7 @@ class BenchmarkRequest(BaseModel):
     prompt_lengths: list[int]
     generation_length: int = 128
     batch_sizes: list[int] = []
+
     @field_validator("prompt_lengths")
     @classmethod
     def validate_prompt_lengths(cls, v: list[int]) -> list[int]:
@@ -102,7 +103,6 @@ def cleanup_old_runs(max_runs: int = 10) -> None:
     if len(completed) > max_runs:
         for bid, _ in completed[:-max_runs]:
             del _benchmark_runs[bid]
-
 
 
 def _generate_prompt(tokenizer: Any, target_tokens: int) -> str:
@@ -197,7 +197,10 @@ async def _run_single_test(
         # Detect first generated token via completion_tokens count,
         # not new_text. Some models (e.g. Harmony/gpt-oss) produce
         # protocol tokens that don't yield visible new_text.
-        if first_token_time is None and output.completion_tokens > prev_completion_tokens:
+        if (
+            first_token_time is None
+            and output.completion_tokens > prev_completion_tokens
+        ):
             first_token_time = time.perf_counter()
         prev_completion_tokens = output.completion_tokens
         last_output = output
@@ -394,13 +397,16 @@ async def _upload_to_omlx_ai(run: BenchmarkRun, engine_pool: Any) -> None:
         parse_chip_info,
     )
 
-    await _send_event(run, {
-        "type": "progress",
-        "phase": "upload",
-        "message": "Uploading to community benchmarks...",
-        "current": 0,
-        "total": 0,
-    })
+    await _send_event(
+        run,
+        {
+            "type": "progress",
+            "phase": "upload",
+            "message": "Uploading to community benchmarks...",
+            "current": 0,
+            "total": 0,
+        },
+    )
 
     # Collect hardware info
     chip_string = get_chip_name()
@@ -434,23 +440,25 @@ async def _upload_to_omlx_ai(run: BenchmarkRun, engine_pool: Any) -> None:
 
     # Build batching_results from batch data
     batching_results = []
-    pp1024_single = next(
-        (r for r in single_results if r.get("pp") == 1024), None
-    )
+    pp1024_single = next((r for r in single_results if r.get("pp") == 1024), None)
     if pp1024_single and batch_results:
         baseline_tps = pp1024_single["gen_tps"]
-        batching_results.append({
-            "batch_size": 1,
-            "tg_tps": baseline_tps,
-            "speedup": 1.0,
-        })
+        batching_results.append(
+            {
+                "batch_size": 1,
+                "tg_tps": baseline_tps,
+                "speedup": 1.0,
+            }
+        )
         for br in batch_results:
             speedup = round(br["tg_tps"] / baseline_tps, 2) if baseline_tps > 0 else 1.0
-            batching_results.append({
-                "batch_size": br["batch_size"],
-                "tg_tps": br["tg_tps"],
-                "speedup": speedup,
-            })
+            batching_results.append(
+                {
+                    "batch_size": br["batch_size"],
+                    "tg_tps": br["tg_tps"],
+                    "speedup": speedup,
+                }
+            )
 
     success_count = 0
     failed_count = 0
@@ -496,26 +504,32 @@ async def _upload_to_omlx_ai(run: BenchmarkRun, engine_pool: Any) -> None:
             if resp.status_code == 201:
                 data = resp.json()
                 success_count += 1
-                await _send_event(run, {
-                    "type": "upload",
-                    "data": {
-                        "context_length": context_length,
-                        "id": data.get("id"),
-                        "url": data.get("url"),
+                await _send_event(
+                    run,
+                    {
+                        "type": "upload",
+                        "data": {
+                            "context_length": context_length,
+                            "id": data.get("id"),
+                            "url": data.get("url"),
+                        },
                     },
-                })
+                )
             elif resp.status_code == 409:
                 data = resp.json()
                 success_count += 1  # Duplicate is still ok
-                await _send_event(run, {
-                    "type": "upload",
-                    "data": {
-                        "context_length": context_length,
-                        "id": data.get("existing_id"),
-                        "url": data.get("existing_url"),
-                        "duplicate": True,
+                await _send_event(
+                    run,
+                    {
+                        "type": "upload",
+                        "data": {
+                            "context_length": context_length,
+                            "id": data.get("existing_id"),
+                            "url": data.get("existing_url"),
+                            "duplicate": True,
+                        },
                     },
-                })
+                )
             else:
                 failed_count += 1
                 error_msg = ""
@@ -523,13 +537,16 @@ async def _upload_to_omlx_ai(run: BenchmarkRun, engine_pool: Any) -> None:
                     error_msg = resp.json().get("error", resp.text)
                 except Exception:
                     error_msg = resp.text
-                await _send_event(run, {
-                    "type": "upload",
-                    "data": {
-                        "context_length": context_length,
-                        "error": error_msg,
+                await _send_event(
+                    run,
+                    {
+                        "type": "upload",
+                        "data": {
+                            "context_length": context_length,
+                            "error": error_msg,
+                        },
                     },
-                })
+                )
                 logger.warning(
                     f"Benchmark upload failed for pp{context_length}: "
                     f"{resp.status_code} {error_msg}"
@@ -537,24 +554,30 @@ async def _upload_to_omlx_ai(run: BenchmarkRun, engine_pool: Any) -> None:
 
         except Exception as e:
             failed_count += 1
-            await _send_event(run, {
-                "type": "upload",
-                "data": {
-                    "context_length": context_length,
-                    "error": str(e),
+            await _send_event(
+                run,
+                {
+                    "type": "upload",
+                    "data": {
+                        "context_length": context_length,
+                        "error": str(e),
+                    },
                 },
-            })
+            )
             logger.warning(f"Benchmark upload error for pp{context_length}: {e}")
 
-    await _send_event(run, {
-        "type": "upload_done",
-        "data": {
-            "owner_hash": owner_hash_display,
-            "total": len(single_results),
-            "success": success_count,
-            "failed": failed_count,
+    await _send_event(
+        run,
+        {
+            "type": "upload_done",
+            "data": {
+                "owner_hash": owner_hash_display,
+                "total": len(single_results),
+                "success": success_count,
+                "failed": failed_count,
+            },
         },
-    })
+    )
 
     logger.info(
         f"Benchmark upload complete: {success_count}/{len(single_results)} succeeded"
@@ -580,13 +603,16 @@ async def run_benchmark(run: BenchmarkRun, engine_pool: Any) -> None:
         # Phase 1: Unload all loaded models
         loaded_ids = engine_pool.get_loaded_model_ids()
         if loaded_ids:
-            await _send_event(run, {
-                "type": "progress",
-                "phase": "unload",
-                "message": f"Unloading {len(loaded_ids)} model(s)...",
-                "current": 0,
-                "total": total_tests,
-            })
+            await _send_event(
+                run,
+                {
+                    "type": "progress",
+                    "phase": "unload",
+                    "message": f"Unloading {len(loaded_ids)} model(s)...",
+                    "current": 0,
+                    "total": total_tests,
+                },
+            )
             for model_id in loaded_ids:
                 try:
                     await engine_pool._unload_engine(model_id)
@@ -595,13 +621,16 @@ async def run_benchmark(run: BenchmarkRun, engine_pool: Any) -> None:
                     logger.warning(f"Benchmark: failed to unload {model_id}: {e}")
 
         # Phase 2: Load the target model
-        await _send_event(run, {
-            "type": "progress",
-            "phase": "load",
-            "message": f"Loading {request.model_id}...",
-            "current": 0,
-            "total": total_tests,
-        })
+        await _send_event(
+            run,
+            {
+                "type": "progress",
+                "phase": "load",
+                "message": f"Loading {request.model_id}...",
+                "current": 0,
+                "total": total_tests,
+            },
+        )
         engine = await engine_pool.get_engine(request.model_id, force_lm=True)
         logger.info(f"Benchmark: loaded {request.model_id}")
 
@@ -619,13 +648,16 @@ async def run_benchmark(run: BenchmarkRun, engine_pool: Any) -> None:
         # Metal shader compilation, and KV cache initialization.
         # Without this, the first real benchmark test absorbs all
         # one-time overhead and shows artificially low pp TPS.
-        await _send_event(run, {
-            "type": "progress",
-            "phase": "warmup",
-            "message": "Warming up (JIT compile)...",
-            "current": 0,
-            "total": total_tests,
-        })
+        await _send_event(
+            run,
+            {
+                "type": "progress",
+                "phase": "warmup",
+                "message": "Warming up (JIT compile)...",
+                "current": 0,
+                "total": total_tests,
+            },
+        )
         warmup_prompt = _generate_prompt(tokenizer, 32)
         async for _ in engine.stream_generate(
             prompt=warmup_prompt, max_tokens=8, temperature=0.0
@@ -638,13 +670,16 @@ async def run_benchmark(run: BenchmarkRun, engine_pool: Any) -> None:
 
         for pp_len in request.prompt_lengths:
             current_test += 1
-            await _send_event(run, {
-                "type": "progress",
-                "phase": "single",
-                "message": f"Single: pp{pp_len}/tg{request.generation_length}",
-                "current": current_test,
-                "total": total_tests,
-            })
+            await _send_event(
+                run,
+                {
+                    "type": "progress",
+                    "phase": "single",
+                    "message": f"Single: pp{pp_len}/tg{request.generation_length}",
+                    "current": current_test,
+                    "total": total_tests,
+                },
+            )
 
             metrics = await _run_single_test(
                 engine=engine,
@@ -681,13 +716,16 @@ async def run_benchmark(run: BenchmarkRun, engine_pool: Any) -> None:
 
         for batch_size in request.batch_sizes if hasattr(engine, "_engine") else []:
             current_test += 1
-            await _send_event(run, {
-                "type": "progress",
-                "phase": "batch",
-                "message": f"Batch {batch_size}x: pp1024/tg{request.generation_length}",
-                "current": current_test,
-                "total": total_tests,
-            })
+            await _send_event(
+                run,
+                {
+                    "type": "progress",
+                    "phase": "batch",
+                    "message": f"Batch {batch_size}x: pp1024/tg{request.generation_length}",
+                    "current": current_test,
+                    "total": total_tests,
+                },
+            )
 
             batch_metrics = await _run_batch_test(
                 engine=engine,
@@ -707,13 +745,16 @@ async def run_benchmark(run: BenchmarkRun, engine_pool: Any) -> None:
             await _send_event(run, {"type": "result", "data": result})
 
         # Phase 5: Unload benchmark model
-        await _send_event(run, {
-            "type": "progress",
-            "phase": "cleanup",
-            "message": f"Unloading {request.model_id}...",
-            "current": total_tests,
-            "total": total_tests,
-        })
+        await _send_event(
+            run,
+            {
+                "type": "progress",
+                "phase": "cleanup",
+                "message": f"Unloading {request.model_id}...",
+                "current": total_tests,
+                "total": total_tests,
+            },
+        )
         try:
             await engine_pool._unload_engine(request.model_id)
             logger.info(f"Benchmark: unloaded {request.model_id} after benchmark")
@@ -723,37 +764,46 @@ async def run_benchmark(run: BenchmarkRun, engine_pool: Any) -> None:
         # Done
         overall_duration = time.perf_counter() - overall_start
         run.status = "completed"
-        await _send_event(run, {
-            "type": "done",
-            "summary": {
-                "model_id": request.model_id,
-                "total_time": round(overall_duration, 1),
-                "total_tests": total_tests,
+        await _send_event(
+            run,
+            {
+                "type": "done",
+                "summary": {
+                    "model_id": request.model_id,
+                    "total_time": round(overall_duration, 1),
+                    "total_tests": total_tests,
+                },
             },
-        })
+        )
 
         # Upload results to omlx.ai (failures don't affect benchmark status)
         try:
             await _upload_to_omlx_ai(run, engine_pool)
         except Exception as e:
             logger.warning(f"Benchmark upload to omlx.ai failed: {e}")
-            await _send_event(run, {
-                "type": "upload_done",
-                "data": {
-                    "owner_hash": None,
-                    "total": 0,
-                    "success": 0,
-                    "failed": 0,
-                    "error": str(e),
+            await _send_event(
+                run,
+                {
+                    "type": "upload_done",
+                    "data": {
+                        "owner_hash": None,
+                        "total": 0,
+                        "success": 0,
+                        "failed": 0,
+                        "error": str(e),
+                    },
                 },
-            })
+            )
 
     except asyncio.CancelledError:
         run.status = "cancelled"
-        await _send_event(run, {
-            "type": "error",
-            "message": "Benchmark cancelled by user",
-        })
+        await _send_event(
+            run,
+            {
+                "type": "error",
+                "message": "Benchmark cancelled by user",
+            },
+        )
         # Try to unload the model on cancellation
         try:
             await engine_pool._unload_engine(request.model_id)
@@ -764,10 +814,13 @@ async def run_benchmark(run: BenchmarkRun, engine_pool: Any) -> None:
         logger.error(f"Benchmark error: {e}", exc_info=True)
         run.status = "error"
         run.error_message = str(e)
-        await _send_event(run, {
-            "type": "error",
-            "message": str(e),
-        })
+        await _send_event(
+            run,
+            {
+                "type": "error",
+                "message": str(e),
+            },
+        )
         # Try to unload the model on error
         try:
             await engine_pool._unload_engine(request.model_id)

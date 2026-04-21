@@ -107,9 +107,7 @@ class MLXEmbeddingModel:
             from .xlm_roberta import Model, ModelArgs
 
             known_fields = {f.name for f in ModelArgs.__dataclass_fields__.values()}
-            model_config = {
-                k: v for k, v in config_dict.items() if k in known_fields
-            }
+            model_config = {k: v for k, v in config_dict.items() if k in known_fields}
             model_config["architectures"] = architectures
 
             config = ModelArgs(**model_config)
@@ -132,7 +130,9 @@ class MLXEmbeddingModel:
             mx.eval(model_instance.parameters())
 
             try:
-                tokenizer = AutoTokenizer.from_pretrained(str(model_path), use_fast=False)
+                tokenizer = AutoTokenizer.from_pretrained(
+                    str(model_path), use_fast=False
+                )
             except Exception:
                 tokenizer = AutoTokenizer.from_pretrained(str(model_path))
 
@@ -166,7 +166,9 @@ class MLXEmbeddingModel:
         try:
             from mlx_embeddings import load
 
-            logger.info(f"Loading embedding model via mlx-embeddings: {self.model_name}")
+            logger.info(
+                f"Loading embedding model via mlx-embeddings: {self.model_name}"
+            )
 
             self.model, self.processor = load(self.model_name)
 
@@ -207,16 +209,17 @@ class MLXEmbeddingModel:
             return outputs.text_embeds
         if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
             return outputs.pooler_output
-        if hasattr(outputs, "last_hidden_state") and outputs.last_hidden_state is not None:
+        if (
+            hasattr(outputs, "last_hidden_state")
+            and outputs.last_hidden_state is not None
+        ):
             return mx.mean(outputs.last_hidden_state, axis=1)
         raise ValueError(
             "Model output does not contain expected embedding fields "
             "(text_embeds, pooler_output, or last_hidden_state)"
         )
 
-    def _validate_native_weights(
-        self, model_instance, weights: Dict[str, Any]
-    ) -> None:
+    def _validate_native_weights(self, model_instance, weights: Dict[str, Any]) -> None:
         """Reject native checkpoints with missing or shape-incompatible core weights."""
         expected_weights = dict(tree_flatten(model_instance.parameters()))
         expected_weight_names = set(expected_weights.keys())
@@ -356,6 +359,7 @@ class MLXEmbeddingModel:
         base_model = self.model
 
         try:
+
             def _compiled_embed(inputs):
                 outputs = base_model(**self._adapt_model_inputs_for_call(inputs))
                 return self._extract_embeddings_array(outputs)
@@ -366,8 +370,7 @@ class MLXEmbeddingModel:
             _ = self._compiled_embed(test_inputs)
 
             logger.info(
-                f"mx.compile enabled for {self.model_name} "
-                f"(primitive embedding path)"
+                f"mx.compile enabled for {self.model_name} (primitive embedding path)"
             )
             return True
         except Exception as e:
@@ -406,7 +409,9 @@ class MLXEmbeddingModel:
         if hasattr(processor, "_tokenizer") and not uses_custom_embedding_inputs:
             processor = processor._tokenizer
 
-        if has_image_inputs and (self._using_native or not uses_custom_embedding_inputs):
+        if has_image_inputs and (
+            self._using_native or not uses_custom_embedding_inputs
+        ):
             raise ValueError(
                 f"Embedding model '{self.model_name}' does not support image inputs"
             )
@@ -507,9 +512,7 @@ class MLXEmbeddingModel:
             dimensions=dimensions,
         )
 
-    def _count_tokens(
-        self, inputs: Union[List[str], List[Dict[str, str]]]
-    ) -> int:
+    def _count_tokens(self, inputs: Union[List[str], List[Dict[str, str]]]) -> int:
         """Count total tokens in input texts."""
         total = 0
         processor = self.processor
@@ -548,7 +551,12 @@ class MLXEmbeddingModel:
             except (TypeError, ValueError):
                 pass
             if isinstance(attention_mask, list):
-                return int(sum(sum(row) if isinstance(row, list) else row for row in attention_mask))
+                return int(
+                    sum(
+                        sum(row) if isinstance(row, list) else row
+                        for row in attention_mask
+                    )
+                )
             if hasattr(attention_mask, "tolist"):
                 values = attention_mask.tolist()
                 if values and isinstance(values[0], list):
@@ -606,6 +614,5 @@ class MLXEmbeddingModel:
         status = "loaded" if self._loaded else "not loaded"
         impl = "native" if self._using_native else "mlx-embeddings"
         return (
-            f"<MLXEmbeddingModel model={self.model_name} "
-            f"status={status} impl={impl}>"
+            f"<MLXEmbeddingModel model={self.model_name} status={status} impl={impl}>"
         )

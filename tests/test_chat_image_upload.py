@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for chat image upload functionality."""
+
 import json
 from pathlib import Path
 
@@ -115,9 +116,7 @@ class TestChatEditImagePreservation:
         if isinstance(content, str):
             return content
         if isinstance(content, list):
-            return "\n".join(
-                p["text"] for p in content if p.get("type") == "text"
-            )
+            return "\n".join(p["text"] for p in content if p.get("type") == "text")
         return ""
 
     @staticmethod

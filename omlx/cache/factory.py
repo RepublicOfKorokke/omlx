@@ -9,6 +9,7 @@ Note: oMLX only supports paged SSD-based caching. Memory KV cache is managed
 by mlx-lm's BatchGenerator. When paged SSD cache is disabled, no oMLX caching
 is performed.
 """
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
@@ -216,7 +217,9 @@ class CacheFactory:
         # Only create cache components if paged SSD cache is enabled
         if config.paged_ssd_cache_dir is not None:
             paged_cache = CacheFactory.create_paged_cache(config, num_layers)
-            paged_ssd_cache = CacheFactory.create_paged_ssd_cache(config, config.model_name)
+            paged_ssd_cache = CacheFactory.create_paged_ssd_cache(
+                config, config.model_name
+            )
 
             if paged_cache is not None and paged_ssd_cache is not None:
                 paged_cache.set_paged_ssd_cache_manager(paged_ssd_cache)

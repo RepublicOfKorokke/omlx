@@ -60,7 +60,9 @@ def apply_turboquant_attention_patch() -> bool:
                 )
             # Prefill: try quantized fast path, fallback to dequantize+SDPA
             result = real_cache.prefill_attention(
-                queries, scale=scale, mask=mask,
+                queries,
+                scale=scale,
+                mask=mask,
             )
             if result is not None:
                 return result
@@ -81,10 +83,14 @@ def apply_turboquant_attention_patch() -> bool:
     # Also patch any model modules that already imported it locally
     # Covers both mlx_lm (LLM) and mlx_vlm (VLM) model modules
     import sys
+
     for mod_name, mod in list(sys.modules.items()):
         if mod is None:
             continue
-        if not (mod_name.startswith("mlx_lm.models.") or mod_name.startswith("mlx_vlm.models.")):
+        if not (
+            mod_name.startswith("mlx_lm.models.")
+            or mod_name.startswith("mlx_vlm.models.")
+        ):
             continue
         if hasattr(mod, "scaled_dot_product_attention"):
             func = getattr(mod, "scaled_dot_product_attention")
@@ -94,6 +100,7 @@ def apply_turboquant_attention_patch() -> bool:
     # Also patch mlx_vlm.models.base if loaded
     try:
         from mlx_vlm.models import base as vlm_base
+
         if hasattr(vlm_base, "scaled_dot_product_attention"):
             vlm_base.scaled_dot_product_attention = patched_sdpa
     except ImportError:

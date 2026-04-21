@@ -269,7 +269,9 @@ class TestEngineCoreAddRequest:
                 engine.close()
 
     @pytest.mark.asyncio
-    async def test_add_request_with_default_sampling_params(self, mock_model, mock_tokenizer):
+    async def test_add_request_with_default_sampling_params(
+        self, mock_model, mock_tokenizer
+    ):
         """Test add_request() uses default sampling params when none provided."""
         with patch("omlx.engine_core.get_registry") as mock_registry:
             mock_registry.return_value.acquire.return_value = True
@@ -627,7 +629,9 @@ class TestEngineCoreErrorPropagation:
     """Tests for error propagation from engine loop to requests."""
 
     @pytest.mark.asyncio
-    async def test_error_output_propagates_to_collector(self, mock_model, mock_tokenizer):
+    async def test_error_output_propagates_to_collector(
+        self, mock_model, mock_tokenizer
+    ):
         """Test that engine loop errors are sent to request collectors."""
         with patch("omlx.engine_core.get_registry") as mock_registry:
             mock_registry.return_value.acquire.return_value = True
@@ -983,8 +987,10 @@ class TestGlobalMLXExecutor:
 
         # All tasks completed
         assert set(results) == {
-            "engine_a_step1", "engine_b_step1",
-            "engine_a_step2", "engine_b_step2",
+            "engine_a_step1",
+            "engine_b_step1",
+            "engine_a_step2",
+            "engine_b_step2",
         }
         # Critical: no two tasks ever ran at the same time
         assert max_concurrent == 1, (

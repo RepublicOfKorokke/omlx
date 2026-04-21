@@ -85,12 +85,14 @@ class GSM8KBenchmark(BaseBenchmark):
         for i, item in enumerate(items):
             answer_text = item.get("answer", "")
             numeric = _extract_numeric_answer(answer_text)
-            normalized.append({
-                "id": str(i),
-                "question": item.get("question", ""),
-                "answer_text": answer_text,
-                "answer": numeric,
-            })
+            normalized.append(
+                {
+                    "id": str(i),
+                    "question": item.get("question", ""),
+                    "answer_text": answer_text,
+                    "answer": numeric,
+                }
+            )
 
         logger.info(f"GSM8K: loaded {len(normalized)} questions")
 

@@ -40,9 +40,7 @@ def deterministic_sample(items: list[dict], n: int) -> list[dict]:
     return rng.sample(items, n)
 
 
-def stratified_sample(
-    items: list[dict], n: int, key: str
-) -> list[dict]:
+def stratified_sample(items: list[dict], n: int, key: str) -> list[dict]:
     """Stratified sampling: proportional representation from each category.
 
     Uses a fixed seed so the same questions are always selected.

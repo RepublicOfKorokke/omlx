@@ -42,10 +42,16 @@ class TestStatusEndpoint:
 
     def test_returns_pool_info(self, client):
         """When engine pool exists, return model and memory stats."""
-        pool = MagicMock(spec=[
-            "model_count", "loaded_model_count", "get_loaded_model_ids",
-            "current_model_memory", "max_model_memory", "_entries",
-        ])
+        pool = MagicMock(
+            spec=[
+                "model_count",
+                "loaded_model_count",
+                "get_loaded_model_ids",
+                "current_model_memory",
+                "max_model_memory",
+                "_entries",
+            ]
+        )
         pool.model_count = 5
         pool.loaded_model_count = 2
         pool.get_loaded_model_ids.return_value = ["model-a", "model-b"]
@@ -94,10 +100,16 @@ class TestStatusEndpoint:
         entry.is_loading = False
         entry.engine = engine
 
-        pool = MagicMock(spec=[
-            "model_count", "loaded_model_count", "get_loaded_model_ids",
-            "current_model_memory", "max_model_memory", "_entries",
-        ])
+        pool = MagicMock(
+            spec=[
+                "model_count",
+                "loaded_model_count",
+                "get_loaded_model_ids",
+                "current_model_memory",
+                "max_model_memory",
+                "_entries",
+            ]
+        )
         pool.model_count = 1
         pool.loaded_model_count = 1
         pool.get_loaded_model_ids.return_value = ["model-a"]
@@ -130,19 +142,29 @@ class TestStatusEndpoint:
         resp = client.get("/api/status")
         data = resp.json()
         expected_keys = [
-            "total_requests", "total_prompt_tokens", "total_completion_tokens",
-            "total_cached_tokens", "cache_efficiency",
-            "avg_prefill_tps", "avg_generation_tps",
+            "total_requests",
+            "total_prompt_tokens",
+            "total_completion_tokens",
+            "total_cached_tokens",
+            "cache_efficiency",
+            "avg_prefill_tps",
+            "avg_generation_tps",
         ]
         for key in expected_keys:
             assert key in data, f"Missing key: {key}"
 
     def test_unlimited_memory_max(self, client):
         """When max_model_memory is None, formatted shows 'unlimited'."""
-        pool = MagicMock(spec=[
-            "model_count", "loaded_model_count", "get_loaded_model_ids",
-            "current_model_memory", "max_model_memory", "_entries",
-        ])
+        pool = MagicMock(
+            spec=[
+                "model_count",
+                "loaded_model_count",
+                "get_loaded_model_ids",
+                "current_model_memory",
+                "max_model_memory",
+                "_entries",
+            ]
+        )
         pool.model_count = 0
         pool.loaded_model_count = 0
         pool.get_loaded_model_ids.return_value = []

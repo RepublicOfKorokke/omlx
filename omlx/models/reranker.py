@@ -65,7 +65,7 @@ class MLXRerankerModel:
     # CausalLM reranker prompt template (Qwen3-Reranker format)
     _CAUSAL_LM_SYSTEM_PROMPT = (
         "Judge whether the Document meets the requirements based on the "
-        'Query and the Instruct provided. Note that the answer can only be '
+        "Query and the Instruct provided. Note that the answer can only be "
         '"yes" or "no".'
     )
     _CAUSAL_LM_DEFAULT_INSTRUCTION = (
@@ -126,10 +126,13 @@ class MLXRerankerModel:
         with open(model_path / "config.json") as f:
             config_dict = json.load(f)
 
-        config = ModelArgs(**{
-            k: v for k, v in config_dict.items()
-            if k in ModelArgs.__dataclass_fields__
-        })
+        config = ModelArgs(
+            **{
+                k: v
+                for k, v in config_dict.items()
+                if k in ModelArgs.__dataclass_fields__
+            }
+        )
 
         # Create model
         model = Model(config)
@@ -548,9 +551,7 @@ class MLXRerankerModel:
         if self._is_causal_lm:
             # CausalLM reranker path uses generation/logit selection logic;
             # keep eager path until a dedicated compiled scorer is added.
-            logger.info(
-                f"mx.compile skipped for causal-lm reranker {self.model_name}"
-            )
+            logger.info(f"mx.compile skipped for causal-lm reranker {self.model_name}")
             self._compiled_seq_logits = None
             return False
 
@@ -561,7 +562,10 @@ class MLXRerankerModel:
 
             def _compiled_seq_logits(inputs):
                 outputs = base_model(**inputs)
-                if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
+                if (
+                    hasattr(outputs, "pooler_output")
+                    and outputs.pooler_output is not None
+                ):
                     return outputs.pooler_output
                 raise ValueError(
                     "Model output does not contain pooler_output. "
@@ -585,9 +589,7 @@ class MLXRerankerModel:
             )
             return True
         except Exception as e:
-            logger.info(
-                f"mx.compile unavailable for {self.model_name}: {e}"
-            )
+            logger.info(f"mx.compile unavailable for {self.model_name}: {e}")
             self._compiled_seq_logits = None
             return False
 
@@ -1085,7 +1087,9 @@ class MLXRerankerModel:
 
         if arch not in SUPPORTED_RERANKER_ARCHITECTURES:
             supported_list = ", ".join(
-                sorted(SUPPORTED_RERANKER_ARCHITECTURES | CAUSAL_LM_RERANKER_ARCHITECTURES)
+                sorted(
+                    SUPPORTED_RERANKER_ARCHITECTURES | CAUSAL_LM_RERANKER_ARCHITECTURES
+                )
             )
             raise ValueError(
                 f"Unsupported reranker architecture: {arch}. "

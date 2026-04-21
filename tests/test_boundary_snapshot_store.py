@@ -40,22 +40,26 @@ def _make_extracted(num_layers: int = 4) -> List[Dict[str, Any]]:
     for i in range(num_layers):
         if i % 2 == 0:
             # KVCache placeholder (skipped sliceable layer)
-            result.append({
-                "state": (),
-                "meta_state": (),
-                "class_name": "KVCache",
-                "cache_type": "KVCache",
-            })
+            result.append(
+                {
+                    "state": (),
+                    "meta_state": (),
+                    "class_name": "KVCache",
+                    "cache_type": "KVCache",
+                }
+            )
         else:
             # ArraysCache with small tensors (conv_state + recurrent_state)
             conv_state = mx.ones((1, 3, 16), dtype=mx.float16)
             recurrent_state = mx.ones((1, 4, 8, 12), dtype=mx.bfloat16)
-            result.append({
-                "state": (conv_state, recurrent_state),
-                "meta_state": (),
-                "class_name": "ArraysCache",
-                "cache_type": "ArraysCache",
-            })
+            result.append(
+                {
+                    "state": (conv_state, recurrent_state),
+                    "meta_state": (),
+                    "class_name": "ArraysCache",
+                    "cache_type": "ArraysCache",
+                }
+            )
     return result
 
 
@@ -80,9 +84,7 @@ class TestBoundarySnapshotSSDStore:
 
     def test_save_and_load_roundtrip(self):
         """Save a snapshot and load it back — tensors should match."""
-        ok = self.store.save(
-            "req-1", 1024, [MagicMock()], _mock_extract_cache_states
-        )
+        ok = self.store.save("req-1", 1024, [MagicMock()], _mock_extract_cache_states)
         assert ok
 
         loaded = self.store.load("req-1", 1024)
@@ -154,9 +156,7 @@ class TestBoundarySnapshotSSDStore:
     def test_multiple_snapshots_per_request(self):
         """Multiple token boundaries for the same request."""
         for tc in [1024, 2048, 3072, 4096]:
-            ok = self.store.save(
-                "req-1", tc, [MagicMock()], _mock_extract_cache_states
-            )
+            ok = self.store.save("req-1", tc, [MagicMock()], _mock_extract_cache_states)
             assert ok
 
         for tc in [1024, 2048, 3072, 4096]:
@@ -165,6 +165,7 @@ class TestBoundarySnapshotSSDStore:
 
     def test_save_returns_false_without_mlx(self):
         """Graceful failure when extract function returns empty."""
+
         def failing_extract(cache):
             return [], None
 
@@ -173,16 +174,19 @@ class TestBoundarySnapshotSSDStore:
 
     def test_bfloat16_roundtrip(self):
         """Ensure bfloat16 tensors survive serialization."""
+
         def bf16_extract(cache):
-            return [{
-                "state": (
-                    mx.ones((2, 3), dtype=mx.bfloat16),
-                    mx.zeros((2, 3), dtype=mx.bfloat16),
-                ),
-                "meta_state": (1, 2, 3),
-                "class_name": "ArraysCache",
-                "cache_type": "ArraysCache",
-            }], None
+            return [
+                {
+                    "state": (
+                        mx.ones((2, 3), dtype=mx.bfloat16),
+                        mx.zeros((2, 3), dtype=mx.bfloat16),
+                    ),
+                    "meta_state": (1, 2, 3),
+                    "class_name": "ArraysCache",
+                    "cache_type": "ArraysCache",
+                }
+            ], None
 
         self.store.save("req-bf", 1024, [MagicMock()], bf16_extract)
         loaded = self.store.load("req-bf", 1024)

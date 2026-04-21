@@ -37,8 +37,11 @@ def _get_find_matching_dmg():
     # Save and mock PyObjC modules
     saved = {}
     mock_modules = [
-        "objc", "requests", "AppKit",
-        "AppKit.NSApp", "AppKit.NSObject",
+        "objc",
+        "requests",
+        "AppKit",
+        "AppKit.NSApp",
+        "AppKit.NSObject",
     ]
     for mod in mock_modules:
         saved[mod] = sys.modules.get(mod)
@@ -52,7 +55,10 @@ def _get_find_matching_dmg():
 
     # Save omlx_app modules before mocking so they can be restored
     omlx_app_modules = [
-        "omlx_app.app", "omlx_app", "omlx_app.config", "omlx_app.server_manager",
+        "omlx_app.app",
+        "omlx_app",
+        "omlx_app.config",
+        "omlx_app.server_manager",
     ]
     for mod in omlx_app_modules:
         saved[mod] = sys.modules.get(mod)
@@ -71,9 +77,7 @@ def _get_find_matching_dmg():
         import os
 
         # Add packaging to path temporarily
-        packaging_dir = os.path.join(
-            os.path.dirname(__file__), "..", "packaging"
-        )
+        packaging_dir = os.path.join(os.path.dirname(__file__), "..", "packaging")
         sys.path.insert(0, packaging_dir)
         try:
             # Clear cached module
@@ -88,9 +92,7 @@ def _get_find_matching_dmg():
                 os_major = mac_ver.split(".")[0]
                 os_tag = f"macos{os_major}"
 
-                dmg_assets = [
-                    a for a in assets if a.get("name", "").endswith(".dmg")
-                ]
+                dmg_assets = [a for a in assets if a.get("name", "").endswith(".dmg")]
 
                 for asset in dmg_assets:
                     name = asset["name"]

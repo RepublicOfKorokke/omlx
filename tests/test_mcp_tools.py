@@ -428,7 +428,10 @@ class TestHasToolCalls:
                 {
                     "message": {
                         "tool_calls": [
-                            {"id": "call_1", "function": {"name": "t", "arguments": "{}"}}
+                            {
+                                "id": "call_1",
+                                "function": {"name": "t", "arguments": "{}"},
+                            }
                         ]
                     }
                 }
@@ -439,9 +442,7 @@ class TestHasToolCalls:
 
     def test_has_tool_calls_false(self):
         """Test returns False when no tool calls."""
-        response = {
-            "choices": [{"message": {"content": "No tools"}}]
-        }
+        response = {"choices": [{"message": {"content": "No tools"}}]}
 
         assert has_tool_calls(response) is False
 

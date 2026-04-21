@@ -117,7 +117,7 @@ def normalize_input(input_data: Union[str, List[str]]) -> List[str]:
 
 
 def normalize_embedding_items(
-    items: List[Union[EmbeddingInputItem, Dict[str, Any]]]
+    items: List[Union[EmbeddingInputItem, Dict[str, Any]]],
 ) -> List[Dict[str, str]]:
     """
     Normalize structured embedding items into plain dicts.
@@ -150,5 +150,3 @@ def normalize_embedding_items(
         normalized.append(normalized_item)
 
     return normalized
-
-

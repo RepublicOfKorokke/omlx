@@ -29,7 +29,9 @@ class PrefillProgressTracker:
         self._progress: Dict[str, Dict[str, Any]] = {}
         self._lock = threading.Lock()
 
-    def update(self, request_id: str, processed: int, total: int, model_id: str) -> None:
+    def update(
+        self, request_id: str, processed: int, total: int, model_id: str
+    ) -> None:
         """Update prefill progress for a request.
 
         Auto-removes the entry when processed >= total (prefill complete).
@@ -75,13 +77,15 @@ class PrefillProgressTracker:
                 remaining = entry["total"] - entry["processed"]
                 speed = entry.get("speed", 0.0)
                 eta = remaining / speed if speed > 0 else None
-                results.append({
-                    "request_id": rid,
-                    "processed": entry["processed"],
-                    "total": entry["total"],
-                    "speed": round(speed, 1),
-                    "eta": round(eta, 1) if eta is not None else None,
-                })
+                results.append(
+                    {
+                        "request_id": rid,
+                        "processed": entry["processed"],
+                        "total": entry["total"],
+                        "speed": round(speed, 1),
+                        "eta": round(eta, 1) if eta is not None else None,
+                    }
+                )
             return results
 
     def clear(self) -> None:

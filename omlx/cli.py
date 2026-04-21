@@ -88,15 +88,24 @@ def serve_command(args):
 
     # Configure logging (use settings value which has proper priority)
     level_name = settings.server.log_level.upper()
-    log_level = TRACE if level_name == "TRACE" else getattr(logging, level_name, logging.INFO)
+    log_level = (
+        TRACE if level_name == "TRACE" else getattr(logging, level_name, logging.INFO)
+    )
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     # Set omlx loggers
-    for name in ["omlx", "omlx.scheduler", "omlx.paged_ssd_cache",
-                 "omlx.memory_monitor", "omlx.paged_cache", "omlx.prefix_cache",
-                 "omlx.engine_pool", "omlx.model_discovery"]:
+    for name in [
+        "omlx",
+        "omlx.scheduler",
+        "omlx.paged_ssd_cache",
+        "omlx.memory_monitor",
+        "omlx.paged_cache",
+        "omlx.prefix_cache",
+        "omlx.engine_pool",
+        "omlx.model_discovery",
+    ]:
         logging.getLogger(name).setLevel(log_level)
 
     # Suppress repetitive admin stats access logs
@@ -206,7 +215,9 @@ def serve_command(args):
             cache_max_size_bytes = parse_size(args.paged_ssd_cache_max_size)
         else:
             # Use settings value (handles "auto" -> 10% of SSD capacity)
-            cache_max_size_bytes = settings.cache.get_ssd_cache_max_size_bytes(settings.base_path)
+            cache_max_size_bytes = settings.cache.get_ssd_cache_max_size_bytes(
+                settings.base_path
+            )
         scheduler_config.paged_ssd_cache_max_size = cache_max_size_bytes
     else:
         scheduler_config.paged_ssd_cache_max_size = 0
@@ -243,6 +254,7 @@ def serve_command(args):
     # and are only released via mx.clear_cache() (which we protect
     # with mx.synchronize()). See issue #300.
     import mlx.core as mx
+
     total_mem = mx.device_info().get("memory_size", 0)
     if total_mem > 0:
         mx.set_cache_limit(total_mem)
@@ -261,7 +273,9 @@ def serve_command(args):
     # Start server
     print(f"Starting server at http://{settings.server.host}:{settings.server.port}")
     # uvicorn does not support "trace" — map to "debug" for its internal logging
-    uvicorn_level = "debug" if settings.server.log_level == "trace" else settings.server.log_level
+    uvicorn_level = (
+        "debug" if settings.server.log_level == "trace" else settings.server.log_level
+    )
     # Only show access logs at trace level
     show_access_log = settings.server.log_level == "trace"
     uvicorn.run(
@@ -271,7 +285,6 @@ def serve_command(args):
         log_level=uvicorn_level,
         access_log=show_access_log,
     )
-
 
 
 def launch_command(args):
@@ -419,7 +432,9 @@ def diagnose_menubar() -> int:
     try:
         res = subprocess.run(
             ["pgrep", "-af", "omlx_app"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         running = bool(res.stdout.strip())
         print(f"Menubar app:    {'running' if running else 'NOT running'}")
@@ -468,7 +483,9 @@ def diagnose_menubar() -> int:
     print()
     print("If the icon is missing on macOS Tahoe (26.x):")
     print("  1. Open System Settings > Menu Bar")
-    print("     open 'x-apple.systempreferences:com.apple.ControlCenter-Settings.extension?MenuBar'")
+    print(
+        "     open 'x-apple.systempreferences:com.apple.ControlCenter-Settings.extension?MenuBar'"
+    )
     print("  2. Find 'oMLX' and set it to 'Show in Menu Bar'")
     print("  3. If oMLX isn't in the list, quit the menubar app and relaunch oMLX.app")
     print()
@@ -544,8 +561,12 @@ Example directory structure:
     )
 
     # Server options
-    serve_parser.add_argument("--host", type=str, default=None, help="Host to bind (default: 127.0.0.1)")
-    serve_parser.add_argument("--port", type=int, default=None, help="Port to bind (default: 8000)")
+    serve_parser.add_argument(
+        "--host", type=str, default=None, help="Host to bind (default: 127.0.0.1)"
+    )
+    serve_parser.add_argument(
+        "--port", type=int, default=None, help="Port to bind (default: 8000)"
+    )
     serve_parser.add_argument(
         "--log-level",
         type=str,

@@ -90,7 +90,11 @@ class MockModel:
     def __call__(self, input_ids: Any, **kwargs: Any) -> Any:
         """Forward pass (returns mock logits)."""
         mock_output = MagicMock()
-        mock_output.shape = (1, len(input_ids) if hasattr(input_ids, "__len__") else 1, self.config.vocab_size)
+        mock_output.shape = (
+            1,
+            len(input_ids) if hasattr(input_ids, "__len__") else 1,
+            self.config.vocab_size,
+        )
         return mock_output
 
     def parameters(self) -> Dict[str, Any]:

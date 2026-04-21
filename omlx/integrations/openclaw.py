@@ -33,10 +33,7 @@ class OpenClawIntegration(Integration):
     def get_command(
         self, port: int, api_key: str, model: str, host: str = "127.0.0.1"
     ) -> str:
-        return (
-            f"{get_cli_prefix()} "
-            f"launch openclaw --model {model or 'select-a-model'}"
-        )
+        return f"{get_cli_prefix()} launch openclaw --model {model or 'select-a-model'}"
 
     def configure(
         self,
@@ -75,9 +72,9 @@ class OpenClawIntegration(Integration):
 
             # Set as default model
             if model:
-                config.setdefault("agents", {}).setdefault(
-                    "defaults", {}
-                ).setdefault("model", {})
+                config.setdefault("agents", {}).setdefault("defaults", {}).setdefault(
+                    "model", {}
+                )
                 config["agents"]["defaults"]["model"]["primary"] = f"omlx/{model}"
 
             # Set tools profile

@@ -66,12 +66,14 @@ class MMLUBenchmark(BaseBenchmark):
             choices = _parse_choices(item.get("choices", []))
             answer_idx = item.get("answer", 0)
             answer_letter = ANSWER_MAP.get(answer_idx, str(answer_idx))
-            all_items.append({
-                "question": item["question"],
-                "choices": choices,
-                "answer": answer_letter,
-                "subject": item.get("subject", "unknown"),
-            })
+            all_items.append(
+                {
+                    "question": item["question"],
+                    "choices": choices,
+                    "answer": answer_letter,
+                    "subject": item.get("subject", "unknown"),
+                }
+            )
 
         # Load dev examples for few-shot
         dev_items = load_jsonl(DATA_DIR / "mmlu_dev.jsonl")
@@ -83,11 +85,13 @@ class MMLUBenchmark(BaseBenchmark):
             if subject not in self._few_shot_examples:
                 self._few_shot_examples[subject] = []
             if len(self._few_shot_examples[subject]) < 5:
-                self._few_shot_examples[subject].append({
-                    "question": item["question"],
-                    "choices": choices,
-                    "answer": answer_letter,
-                })
+                self._few_shot_examples[subject].append(
+                    {
+                        "question": item["question"],
+                        "choices": choices,
+                        "answer": answer_letter,
+                    }
+                )
 
         logger.info(f"MMLU: loaded {len(all_items)} questions")
 

@@ -152,9 +152,7 @@ class WelcomeWindowController(NSObject):
 
         # Subtitle
         y -= 22
-        subtitle = NSTextField.labelWithString_(
-            "LLM inference, optimized for your Mac"
-        )
+        subtitle = NSTextField.labelWithString_("LLM inference, optimized for your Mac")
         subtitle.setFont_(NSFont.systemFontOfSize_(13))
         subtitle.setTextColor_(NSColor.secondaryLabelColor())
         subtitle.setAlignment_(NSCenterTextAlignment)
@@ -203,7 +201,9 @@ class WelcomeWindowController(NSObject):
         browse_base_btn.setBezelStyle_(NSBezelStyleRounded)
         browse_base_btn.setFont_(NSFont.systemFontOfSize_(11))
         browse_base_btn.setTarget_(self)
-        browse_base_btn.setAction_(objc.selector(self.browseBaseDir_, signature=b"v@:@"))
+        browse_base_btn.setAction_(
+            objc.selector(self.browseBaseDir_, signature=b"v@:@")
+        )
         step1_content.addSubview_(browse_base_btn)
 
         # Separator
@@ -220,7 +220,9 @@ class WelcomeWindowController(NSObject):
         step1_content.addSubview_(md_label)
 
         default_model = self.config.get_effective_model_dir()
-        model_display = self.config.model_dir if self.config.model_dir else default_model
+        model_display = (
+            self.config.model_dir if self.config.model_dir else default_model
+        )
         self.model_dir_label = NSTextField.labelWithString_(model_display)
         self.model_dir_label.setFont_(NSFont.monospacedSystemFontOfSize_weight_(10, 0))
         self.model_dir_label.setTextColor_(NSColor.secondaryLabelColor())
@@ -302,9 +304,7 @@ class WelcomeWindowController(NSObject):
         self.api_key_plain.setHidden_(True)
         step1_content.addSubview_(self.api_key_plain)
 
-        self._eye_btn = NSButton.alloc().initWithFrame_(
-            NSMakeRect(334, cy - 2, 28, 22)
-        )
+        self._eye_btn = NSButton.alloc().initWithFrame_(NSMakeRect(334, cy - 2, 28, 22))
         self._eye_btn.setBordered_(False)
         eye_icon = NSImage.imageWithSystemSymbolName_accessibilityDescription_(
             "eye", None
@@ -349,7 +349,9 @@ class WelcomeWindowController(NSObject):
         self.start_button.setBezelStyle_(NSBezelStyleRounded)
         self.start_button.setFont_(NSFont.systemFontOfSize_(12))
         self.start_button.setTarget_(self)
-        self.start_button.setAction_(objc.selector(self.startServer_, signature=b"v@:@"))
+        self.start_button.setAction_(
+            objc.selector(self.startServer_, signature=b"v@:@")
+        )
         step2_content.addSubview_(self.start_button)
 
         y -= 84
@@ -566,9 +568,7 @@ class WelcomeWindowController(NSObject):
                 if self.server_manager.adopt():
                     self.start_button.setEnabled_(False)
                     self.start_button.setTitle_("Server Running")
-                    self.status_label.setStringValue_(
-                        "Adopted existing server."
-                    )
+                    self.status_label.setStringValue_("Adopted existing server.")
                     self.status_label.setTextColor_(NSColor.systemGreenColor())
                 else:
                     self.status_label.setStringValue_(
@@ -579,12 +579,11 @@ class WelcomeWindowController(NSObject):
                 if conflict.pid:
                     self.server_manager._kill_external_server(conflict.pid)
                     import time
+
                     time.sleep(0.5)
                 result = self.server_manager.start()
                 if isinstance(result, PortConflict):
-                    self.status_label.setStringValue_(
-                        "Port still in use. Try again."
-                    )
+                    self.status_label.setStringValue_("Port still in use. Try again.")
                     self.status_label.setTextColor_(NSColor.systemRedColor())
                 else:
                     self.start_button.setEnabled_(False)

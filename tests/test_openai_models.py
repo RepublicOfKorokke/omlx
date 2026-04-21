@@ -160,7 +160,9 @@ class TestFunctionCallAndToolCall:
         tc = ToolCall(
             id="call_abc123",
             type="function",
-            function=FunctionCall(name="get_weather", arguments='{"location": "Tokyo"}'),
+            function=FunctionCall(
+                name="get_weather", arguments='{"location": "Tokyo"}'
+            ),
         )
 
         assert tc.id == "call_abc123"
@@ -608,6 +610,7 @@ class TestModelInfo:
 # =============================================================================
 # Stop Field Coercion
 # =============================================================================
+
 
 class TestStopCoercion:
     """Tests for stop field string-to-list coercion (OpenAI compat)."""

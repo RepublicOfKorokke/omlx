@@ -266,6 +266,7 @@ def _parse_bracket_tool_calls(text: str) -> Tuple[str, Optional[List[ToolCall]]]
 # Gemma 4 robust fallback parser
 # ---------------------------------------------------------------------------
 
+
 def _gemma4_args_to_json_robust(args_str: str) -> dict:
     """Convert Gemma 4 tool call args to a Python dict.
 
@@ -309,9 +310,7 @@ def _gemma4_args_to_json_robust(args_str: str) -> dict:
         except (json.JSONDecodeError, ValueError):
             return f": {json.dumps(value)}{suffix}"
 
-    text = regex.sub(
-        r"(:\s*)([^\",\[\]{}\s][^,}]*?)(\s*[,}])", _quote_bare, text
-    )
+    text = regex.sub(r"(:\s*)([^\",\[\]{}\s][^,}]*?)(\s*[,}])", _quote_bare, text)
     return json.loads(text)
 
 
@@ -325,9 +324,7 @@ def _parse_gemma4_tool_call_fallback(text: str) -> Union[dict, list]:
     """
     import regex
 
-    pattern = regex.compile(
-        r"call:([\w:.-]+)(\{(?:[^{}]|(?2))*\})", regex.DOTALL
-    )
+    pattern = regex.compile(r"call:([\w:.-]+)(\{(?:[^{}]|(?2))*\})", regex.DOTALL)
     matches = list(pattern.finditer(text))
     if not matches:
         raise ValueError("No function call found in Gemma 4 format")
@@ -421,12 +418,8 @@ def parse_tool_calls(
                     # string values and colons in function names.
                     if tool_call_start == "<|tool_call>":
                         try:
-                            parsed = _parse_gemma4_tool_call_fallback(
-                                match.strip()
-                            )
-                            items = (
-                                parsed if isinstance(parsed, list) else [parsed]
-                            )
+                            parsed = _parse_gemma4_tool_call_fallback(match.strip())
+                            items = parsed if isinstance(parsed, list) else [parsed]
                             for p in items:
                                 name = p.get("name", "")
                                 arguments = p.get("arguments", {})
@@ -1037,7 +1030,7 @@ def restore_gemma4_param_names(arguments: dict) -> dict:
     restored = {}
     for k, v in arguments.items():
         if k.startswith(_GEMMA4_RENAME_PREFIX):
-            original = k[len(_GEMMA4_RENAME_PREFIX):]
+            original = k[len(_GEMMA4_RENAME_PREFIX) :]
             if original in _GEMMA4_COLLIDING_PARAMS:
                 restored[original] = v
                 continue

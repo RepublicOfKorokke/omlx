@@ -225,7 +225,9 @@ class ServerConfig:
         base = str(Path(self.base_path).expanduser())
         args = [
             "serve",
-            "--base-path", base,
-            "--port", str(self.port),
+            "--base-path",
+            base,
+            "--port",
+            str(self.port),
         ]
         return args

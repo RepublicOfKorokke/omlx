@@ -79,8 +79,7 @@ class ProcessMemoryEnforcer:
             self._propagate_memory_limit()
             self._set_metal_memory_limit()
         logger.info(
-            f"Process memory limit changed: "
-            f"{_format_gb(old)} -> {_format_gb(value)}"
+            f"Process memory limit changed: {_format_gb(old)} -> {_format_gb(value)}"
         )
 
     @property
@@ -243,8 +242,7 @@ class ProcessMemoryEnforcer:
                                         f"'{victim}' before eviction"
                                     )
                         logger.warning(
-                            f"Evicting model '{victim}' to enforce "
-                            f"process memory limit"
+                            f"Evicting model '{victim}' to enforce process memory limit"
                         )
                         await self._engine_pool._unload_engine(victim)
                         continue
@@ -306,7 +304,5 @@ class ProcessMemoryEnforcer:
             "max_formatted": _format_gb(self._max_bytes),
             "current_bytes": current,
             "current_formatted": _format_gb(current),
-            "utilization": (
-                current / self._max_bytes if self._max_bytes > 0 else 0.0
-            ),
+            "utilization": (current / self._max_bytes if self._max_bytes > 0 else 0.0),
         }

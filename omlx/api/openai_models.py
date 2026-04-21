@@ -26,8 +26,10 @@ from omlx.api.shared_models import (
 # Content Types
 # =============================================================================
 
+
 class ImageURL(BaseModel):
     """Image URL or base64 data URI for vision model input."""
+
     url: str  # "https://..." or "data:image/jpeg;base64,..."
     detail: Optional[str] = "auto"  # "low", "high", "auto"
 
@@ -40,6 +42,7 @@ class ContentPart(BaseModel):
     - text: Plain text content
     - image_url: Image input for vision models
     """
+
     type: str  # "text" or "image_url"
     text: Optional[str] = None
     image_url: Optional[ImageURL] = None
@@ -48,6 +51,7 @@ class ContentPart(BaseModel):
 # =============================================================================
 # Messages
 # =============================================================================
+
 
 class Message(BaseModel):
     """
@@ -59,6 +63,7 @@ class Message(BaseModel):
     - Tool call messages (assistant with tool_calls)
     - Tool response messages (role="tool" with tool_call_id)
     """
+
     role: str
     content: Optional[Union[str, List[ContentPart], List[dict]]] = None
     # Reasoning/thinking content from <think> blocks (OpenAI reasoning_content field)
@@ -77,14 +82,17 @@ class Message(BaseModel):
 # Tool Calling
 # =============================================================================
 
+
 class FunctionCall(BaseModel):
     """A function call with name and arguments."""
+
     name: str
     arguments: str  # JSON string
 
 
 class ToolCall(BaseModel):
     """A tool call from the model."""
+
     id: str
     type: str = "function"
     function: FunctionCall
@@ -92,6 +100,7 @@ class ToolCall(BaseModel):
 
 class ToolDefinition(BaseModel):
     """Definition of a tool that can be called by the model."""
+
     type: str = "function"
     function: dict
 
@@ -100,8 +109,10 @@ class ToolDefinition(BaseModel):
 # Structured Output (JSON Schema)
 # =============================================================================
 
+
 class ResponseFormatJsonSchema(BaseModel):
     """JSON Schema definition for structured output."""
+
     name: str
     description: Optional[str] = None
     schema_: dict = Field(alias="schema")  # JSON Schema specification
@@ -120,6 +131,7 @@ class ResponseFormat(BaseModel):
     - "json_object": Forces valid JSON output
     - "json_schema": Forces JSON matching a specific schema
     """
+
     type: str = "text"  # "text", "json_object", "json_schema"
     json_schema: Optional[ResponseFormatJsonSchema] = None
 
@@ -136,6 +148,7 @@ class StructuredOutputOptions(BaseModel):
     - choice: List of allowed string values (output will be exactly one)
     - grammar: EBNF/GBNF context-free grammar string
     """
+
     model_config = {"populate_by_name": True}
 
     json_schema: Optional[Union[str, dict]] = Field(None, alias="json")
@@ -148,13 +161,16 @@ class StructuredOutputOptions(BaseModel):
 # Chat Completion
 # =============================================================================
 
+
 class StreamOptions(BaseModel):
     """Options for streaming responses."""
+
     include_usage: bool = False
 
 
 class ChatCompletionRequest(BaseModel):
     """Request for chat completion."""
+
     model: str
     messages: List[Message]
     temperature: float | None = None
@@ -199,6 +215,7 @@ class ChatCompletionRequest(BaseModel):
 
 class AssistantMessage(BaseModel):
     """Response message from the assistant."""
+
     role: str = "assistant"
     content: Optional[str] = None
     reasoning_content: Optional[str] = None
@@ -207,6 +224,7 @@ class AssistantMessage(BaseModel):
 
 class ChatCompletionChoice(BaseModel):
     """A single choice in chat completion response."""
+
     index: int = 0
     message: AssistantMessage
     finish_reason: Optional[str] = "stop"
@@ -245,8 +263,10 @@ class ChatCompletionResponse(BaseModel):
 # Text Completion
 # =============================================================================
 
+
 class CompletionRequest(BaseModel):
     """Request for text completion."""
+
     model: str
     prompt: Union[str, List[str]]
     temperature: float | None = None
@@ -274,6 +294,7 @@ class CompletionRequest(BaseModel):
 
 class CompletionChoice(BaseModel):
     """A single choice in text completion response."""
+
     index: int = 0
     text: str
     finish_reason: Optional[str] = "stop"
@@ -294,6 +315,7 @@ class CompletionResponse(BaseModel):
 # Models List
 # =============================================================================
 
+
 class ModelInfo(BaseModel):
     """Information about an available model."""
 
@@ -305,6 +327,7 @@ class ModelInfo(BaseModel):
 
 class ModelsResponse(BaseModel):
     """Response for listing models."""
+
     object: str = "list"
     data: List[ModelInfo]
 
@@ -313,8 +336,10 @@ class ModelsResponse(BaseModel):
 # MCP (Model Context Protocol)
 # =============================================================================
 
+
 class MCPToolInfo(BaseModel):
     """Information about an MCP tool."""
+
     name: str
     description: str
     server: str
@@ -323,12 +348,14 @@ class MCPToolInfo(BaseModel):
 
 class MCPToolsResponse(BaseModel):
     """Response for listing MCP tools."""
+
     tools: List[MCPToolInfo]
     count: int
 
 
 class MCPServerInfo(BaseModel):
     """Information about an MCP server."""
+
     name: str
     state: str
     transport: str
@@ -338,17 +365,20 @@ class MCPServerInfo(BaseModel):
 
 class MCPServersResponse(BaseModel):
     """Response for listing MCP servers."""
+
     servers: List[MCPServerInfo]
 
 
 class MCPExecuteRequest(BaseModel):
     """Request to execute an MCP tool."""
+
     tool_name: str
     arguments: dict = Field(default_factory=dict)
 
 
 class MCPExecuteResponse(BaseModel):
     """Response from executing an MCP tool."""
+
     tool_name: str
     content: Optional[Union[str, list, dict]] = None
     is_error: bool = False
@@ -359,8 +389,10 @@ class MCPExecuteResponse(BaseModel):
 # Streaming (for SSE responses)
 # =============================================================================
 
+
 class ChatCompletionChunkDelta(BaseModel):
     """Delta content in a streaming chunk."""
+
     role: Optional[str] = None
     content: Optional[str] = None
     reasoning_content: Optional[str] = None
@@ -369,6 +401,7 @@ class ChatCompletionChunkDelta(BaseModel):
 
 class ChatCompletionChunkChoice(BaseModel):
     """A single choice in a streaming chunk."""
+
     index: int = 0
     delta: ChatCompletionChunkDelta
     finish_reason: Optional[str] = None

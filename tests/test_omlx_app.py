@@ -22,7 +22,12 @@ import pytest
 
 # Import the modules under test
 sys.path.insert(0, str(Path(__file__).parent.parent / "packaging"))
-from omlx_app.config import ServerConfig, get_app_support_dir, get_config_path, get_log_path
+from omlx_app.config import (
+    ServerConfig,
+    get_app_support_dir,
+    get_config_path,
+    get_log_path,
+)
 from omlx_app.server_manager import PortConflict, ServerManager, ServerStatus
 
 
@@ -67,8 +72,11 @@ class TestServerConfig:
         assert result["port"] == 8080
         assert result["model_dir"] == "/models"
         expected_keys = {
-            "base_path", "port", "model_dir",
-            "launch_at_login", "start_server_on_launch"
+            "base_path",
+            "port",
+            "model_dir",
+            "launch_at_login",
+            "start_server_on_launch",
         }
         assert set(result.keys()) == expected_keys
 
@@ -183,8 +191,10 @@ class TestServerConfig:
         base = str(Path("/test/base").expanduser())
         assert args == [
             "serve",
-            "--base-path", base,
-            "--port", "9000",
+            "--base-path",
+            base,
+            "--port",
+            "9000",
         ]
 
     def test_build_serve_args_preserves_order(self):
@@ -211,9 +221,7 @@ class TestServerConfig:
         """Test reading API key from server settings.json."""
         config = ServerConfig(base_path=str(tmp_path))
         settings_file = tmp_path / "settings.json"
-        settings_file.write_text(json.dumps({
-            "auth": {"api_key": "test-key-123"}
-        }))
+        settings_file.write_text(json.dumps({"auth": {"api_key": "test-key-123"}}))
 
         assert config.get_server_api_key() == "test-key-123"
 
@@ -226,10 +234,14 @@ class TestServerConfig:
         """Test loading settings from server's settings.json."""
         config = ServerConfig(base_path=str(tmp_path))
         settings_file = tmp_path / "settings.json"
-        settings_file.write_text(json.dumps({
-            "model": {"model_dir": "/server/models"},
-            "server": {"port": 9000},
-        }))
+        settings_file.write_text(
+            json.dumps(
+                {
+                    "model": {"model_dir": "/server/models"},
+                    "server": {"port": 9000},
+                }
+            )
+        )
 
         result = config.load_server_settings()
         assert result["model_dir"] == "/server/models"
@@ -244,10 +256,14 @@ class TestServerConfig:
         """Test syncing port and model_dir from server settings.json."""
         config = ServerConfig(base_path=str(tmp_path), port=8000, model_dir="")
         settings_file = tmp_path / "settings.json"
-        settings_file.write_text(json.dumps({
-            "model": {"model_dir": "/synced/models"},
-            "server": {"port": 9999},
-        }))
+        settings_file.write_text(
+            json.dumps(
+                {
+                    "model": {"model_dir": "/synced/models"},
+                    "server": {"port": 9999},
+                }
+            )
+        )
 
         config.sync_from_server_settings()
         assert config.port == 9999
@@ -274,10 +290,14 @@ class TestServerConfig:
     def test_set_server_api_key_existing_file(self, tmp_path: Path):
         """Test setting API key preserves other settings."""
         settings_file = tmp_path / "settings.json"
-        settings_file.write_text(json.dumps({
-            "server": {"port": 9000},
-            "auth": {"api_key": "old-key"},
-        }))
+        settings_file.write_text(
+            json.dumps(
+                {
+                    "server": {"port": 9000},
+                    "auth": {"api_key": "old-key"},
+                }
+            )
+        )
 
         config = ServerConfig(base_path=str(tmp_path))
         config.set_server_api_key("new-key")
@@ -312,9 +332,12 @@ class TestServerConfig:
         assert mock_session.post.call_count == 2
 
     @patch("omlx_app.config.requests.Session")
-    def test_update_server_api_key_runtime_server_down(self, mock_session_cls, tmp_path):
+    def test_update_server_api_key_runtime_server_down(
+        self, mock_session_cls, tmp_path
+    ):
         """Test runtime update returns False when server unreachable."""
         import requests as req
+
         config = ServerConfig(base_path=str(tmp_path))
         config.set_server_api_key("current-key")
 
@@ -403,6 +426,7 @@ class TestServerManager:
 
     def test_update_status_callback_exception_handled(self, manager: ServerManager):
         """Test that callback exceptions are handled gracefully."""
+
         def bad_callback(status):
             raise RuntimeError("Callback error")
 
@@ -423,7 +447,9 @@ class TestServerManager:
 
     def test_update_config(self, manager: ServerManager):
         """Test config update."""
-        new_config = ServerConfig(base_path="/new/base", port=9999, model_dir="/new/path")
+        new_config = ServerConfig(
+            base_path="/new/base", port=9999, model_dir="/new/path"
+        )
         manager.update_config(new_config)
 
         assert manager.config.base_path == "/new/base"
@@ -460,7 +486,9 @@ class TestServerManager:
         mock_session_cls.return_value = mock_session
 
         assert manager.check_health() is True
-        mock_session.get.assert_called_once_with("http://127.0.0.1:8765/health", timeout=2)
+        mock_session.get.assert_called_once_with(
+            "http://127.0.0.1:8765/health", timeout=2
+        )
         assert mock_session.trust_env is False
 
     @patch("omlx_app.server_manager.requests.Session")
@@ -475,9 +503,12 @@ class TestServerManager:
         assert manager.check_health() is False
 
     @patch("omlx_app.server_manager.requests.Session")
-    def test_check_health_connection_error(self, mock_session_cls, manager: ServerManager):
+    def test_check_health_connection_error(
+        self, mock_session_cls, manager: ServerManager
+    ):
         """Test health check with connection error."""
         import requests
+
         mock_session = Mock()
         mock_session.get.side_effect = requests.RequestException("Connection refused")
         mock_session_cls.return_value = mock_session
@@ -501,7 +532,13 @@ class TestServerManager:
     @patch("omlx_app.server_manager.get_log_path")
     @patch("builtins.open", new_callable=MagicMock)
     def test_start_success(
-        self, mock_open, mock_log_path, mock_popen, mock_port_check, manager: ServerManager, tmp_path
+        self,
+        mock_open,
+        mock_log_path,
+        mock_popen,
+        mock_port_check,
+        manager: ServerManager,
+        tmp_path,
     ):
         """Test successful server start."""
         mock_log_path.return_value = tmp_path / "server.log"
@@ -529,7 +566,12 @@ class TestServerManager:
     @patch("omlx_app.server_manager.subprocess.Popen")
     @patch("omlx_app.server_manager.get_log_path")
     def test_start_popen_exception(
-        self, mock_log_path, mock_popen, mock_port_check, manager: ServerManager, tmp_path
+        self,
+        mock_log_path,
+        mock_popen,
+        mock_port_check,
+        manager: ServerManager,
+        tmp_path,
     ):
         """Test start handles Popen exception."""
         mock_log_path.return_value = tmp_path / "server.log"
@@ -564,9 +606,7 @@ class TestServerManager:
 
     @patch("omlx_app.server_manager.os.killpg")
     @patch("omlx_app.server_manager.os.getpgid")
-    def test_stop_graceful(
-        self, mock_getpgid, mock_killpg, manager: ServerManager
-    ):
+    def test_stop_graceful(self, mock_getpgid, mock_killpg, manager: ServerManager):
         """Test graceful stop with SIGTERM."""
         mock_getpgid.return_value = 12345
         mock_process = Mock()
@@ -643,7 +683,6 @@ class TestServerManager:
         mock_start.assert_called_once()
         assert result is True
 
-
     def test_initial_auto_restart_state(self, manager: ServerManager):
         """Test initial auto-restart related state."""
         assert manager._consecutive_health_failures == 0
@@ -662,8 +701,10 @@ class TestServerManager:
         manager._process = mock_process
         manager._log_file_handle = mock_log
 
-        with patch("omlx_app.server_manager.os.killpg"), \
-             patch("omlx_app.server_manager.os.getpgid", return_value=12345):
+        with (
+            patch("omlx_app.server_manager.os.killpg"),
+            patch("omlx_app.server_manager.os.getpgid", return_value=12345),
+        ):
             manager._cleanup_dead_process()
 
         assert manager._process is None
@@ -686,8 +727,10 @@ class TestServerManager:
         manager._status = ServerStatus.RUNNING
         manager._last_healthy_time = time.time()  # Just became unhealthy
 
-        with patch("omlx_app.server_manager.os.killpg"), \
-             patch("omlx_app.server_manager.os.getpgid", return_value=12345):
+        with (
+            patch("omlx_app.server_manager.os.killpg"),
+            patch("omlx_app.server_manager.os.getpgid", return_value=12345),
+        ):
             manager._try_auto_restart("Server exited with code -9")
 
         assert manager._auto_restart_count == 1
@@ -695,14 +738,18 @@ class TestServerManager:
         mock_do_start.assert_called_once()
 
     @patch.object(ServerManager, "_do_start", return_value=True)
-    def test_try_auto_restart_resets_after_stable(self, mock_do_start, manager: ServerManager):
+    def test_try_auto_restart_resets_after_stable(
+        self, mock_do_start, manager: ServerManager
+    ):
         """Test auto-restart counter resets after stable running period."""
         manager._process = Mock(pid=123)
         manager._auto_restart_count = 2  # Already failed twice
         manager._last_healthy_time = time.time() - 120  # Stable for 2 minutes
 
-        with patch("omlx_app.server_manager.os.killpg"), \
-             patch("omlx_app.server_manager.os.getpgid", return_value=123):
+        with (
+            patch("omlx_app.server_manager.os.killpg"),
+            patch("omlx_app.server_manager.os.getpgid", return_value=123),
+        ):
             manager._try_auto_restart("Server exited with code -9")
 
         # Counter should have been reset then incremented to 1
@@ -714,15 +761,19 @@ class TestServerManager:
         manager._auto_restart_count = 3  # Already at max
         manager._last_healthy_time = time.time()  # Recent crash (no reset)
 
-        with patch("omlx_app.server_manager.os.killpg"), \
-             patch("omlx_app.server_manager.os.getpgid", return_value=123):
+        with (
+            patch("omlx_app.server_manager.os.killpg"),
+            patch("omlx_app.server_manager.os.getpgid", return_value=123),
+        ):
             manager._try_auto_restart("Server exited with code -9")
 
         assert manager.status == ServerStatus.ERROR
         assert "Auto-restart failed after 3 attempts" in manager.error_message
 
     @patch.object(ServerManager, "check_health", return_value=False)
-    def test_health_check_loop_detects_unresponsive(self, mock_health, manager: ServerManager):
+    def test_health_check_loop_detects_unresponsive(
+        self, mock_health, manager: ServerManager
+    ):
         """Test health check loop transitions to UNRESPONSIVE after consecutive failures."""
         mock_process = Mock()
         mock_process.poll.return_value = None  # Process alive
@@ -740,7 +791,9 @@ class TestServerManager:
                 manager._consecutive_health_failures += 1
                 if manager._process and manager._process.poll() is not None:
                     pass
-                elif manager._consecutive_health_failures >= manager._max_health_failures:
+                elif (
+                    manager._consecutive_health_failures >= manager._max_health_failures
+                ):
                     if manager._status != ServerStatus.UNRESPONSIVE:
                         manager._update_status(
                             ServerStatus.UNRESPONSIVE,

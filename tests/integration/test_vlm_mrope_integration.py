@@ -67,6 +67,7 @@ IMAGE_QUESTIONS = [
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 @contextmanager
 def _track_peak_memory(label: str):
     import mlx.core as mx
@@ -117,7 +118,9 @@ def _create_test_image(seed: int = 0, width: int = 336, height: int = 336):
     return img
 
 
-def _create_colored_image(color: Tuple[int, int, int], width: int = 336, height: int = 336):
+def _create_colored_image(
+    color: Tuple[int, int, int], width: int = 336, height: int = 336
+):
     from PIL import Image
 
     return Image.new("RGB", (width, height), color)
@@ -128,14 +131,18 @@ def _check_output_quality(text: str, label: str):
 
     # Word count: use whitespace split for Latin, character count for CJK
     words = text.split()
-    cjk_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff' or '\u3040' <= c <= '\u30ff' or '\uac00' <= c <= '\ud7af')
+    cjk_chars = sum(
+        1
+        for c in text
+        if "\u4e00" <= c <= "\u9fff"
+        or "\u3040" <= c <= "\u30ff"
+        or "\uac00" <= c <= "\ud7af"
+    )
     if cjk_chars < 10:
-        assert len(words) >= 3, (
-            f"[{label}] Too few words ({len(words)}): {text!r}"
-        )
+        assert len(words) >= 3, f"[{label}] Too few words ({len(words)}): {text!r}"
 
     # Alpha/CJK ratio check — content should be mostly text, not control chars
-    text_chars = sum(1 for c in text if c.isalpha() or '\u4e00' <= c <= '\u9fff')
+    text_chars = sum(1 for c in text if c.isalpha() or "\u4e00" <= c <= "\u9fff")
     text_ratio = text_chars / max(len(text), 1)
     assert text_ratio > 0.2, (
         f"[{label}] Low text ratio ({text_ratio:.2f}), "
@@ -146,7 +153,7 @@ def _check_output_quality(text: str, label: str):
         if len(set(text[i : i + 20])) == 1:
             pytest.fail(
                 f"[{label}] Excessive single-char repetition: "
-                f"{text[max(0,i-5):i+25]!r}"
+                f"{text[max(0, i - 5) : i + 25]!r}"
             )
 
 
@@ -179,7 +186,8 @@ def _prepare_vlm_inputs(
             prompt += "\nassistant:"
 
     inputs = prepare_inputs(
-        processor, images=images if images else None,
+        processor,
+        images=images if images else None,
         prompts=[prompt] if isinstance(prompt, str) else prompt,
     )
 
@@ -187,9 +195,9 @@ def _prepare_vlm_inputs(
     pixel_values = inputs.get("pixel_values")
     attention_mask = inputs.get("attention_mask")
     extra_model_inputs = {
-        k: v for k, v in inputs.items()
-        if k not in ("input_ids", "attention_mask", "pixel_values")
-        and v is not None
+        k: v
+        for k, v in inputs.items()
+        if k not in ("input_ids", "attention_mask", "pixel_values") and v is not None
     }
 
     if pixel_values is not None and num_images > 0:
@@ -325,7 +333,9 @@ def _generate_batch(
     config = SchedulerConfig(**config_kwargs)
     scheduler = Scheduler(config=config, model=model, tokenizer=tokenizer)
 
-    has_vlm = vlm_embeds_list is not None and any(e[0] is not None for e in vlm_embeds_list)
+    has_vlm = vlm_embeds_list is not None and any(
+        e[0] is not None for e in vlm_embeds_list
+    )
     rep_penalty = 1.1 if has_vlm else 1.0
 
     requests = []
@@ -385,7 +395,10 @@ def _generate_batch(
 # Test 1: VLM image request — cache store → hit → identical
 # ---------------------------------------------------------------------------
 
-def _build_long_vlm_messages(tokenizer, question: str = "Describe this image in detail.") -> list:
+
+def _build_long_vlm_messages(
+    tokenizer, question: str = "Describe this image in detail."
+) -> list:
     """Build VLM messages with a ~2K-token system prompt for cache testing."""
     base = (
         "You are a helpful image analysis assistant. "
@@ -421,8 +434,11 @@ def _test_vlm_image_cache_consistency(vlm_model, processor, adapter):
     try:
         # Fresh (cache miss)
         tokens_fresh, _ = _generate_tokens(
-            adapter, tokenizer, token_ids,
-            ssd_cache_dir=tmp_dir, block_size=256,
+            adapter,
+            tokenizer,
+            token_ids,
+            ssd_cache_dir=tmp_dir,
+            block_size=256,
             vlm_inputs_embeds=embeds,
             vlm_extra_kwargs=extra_kwargs,
             vlm_image_hash=image_hash,
@@ -441,14 +457,19 @@ def _test_vlm_image_cache_consistency(vlm_model, processor, adapter):
 
         # Cache hit (same prompt + image hash)
         tokens_cached, cached_count = _generate_tokens(
-            adapter, tokenizer, token_ids2,
-            ssd_cache_dir=tmp_dir, block_size=256,
+            adapter,
+            tokenizer,
+            token_ids2,
+            ssd_cache_dir=tmp_dir,
+            block_size=256,
             vlm_inputs_embeds=embeds2,
             vlm_extra_kwargs=extra_kwargs2,
             vlm_image_hash=image_hash,
         )
         text_cached = tokenizer.decode(tokens_cached)
-        print(f"    Cached ({len(tokens_cached)} tokens, hit={cached_count}): {text_cached[:120]}...")
+        print(
+            f"    Cached ({len(tokens_cached)} tokens, hit={cached_count}): {text_cached[:120]}..."
+        )
         _check_output_quality(text_cached, "mRoPE VLM cached")
 
         match = tokens_fresh == tokens_cached
@@ -472,7 +493,9 @@ def _test_vlm_image_cache_consistency(vlm_model, processor, adapter):
         # partial restore + re-prefill. This is a known SSD cache limitation,
         # not an mRoPE-specific issue. Both outputs must be coherent.
         if not match:
-            print("    NOTE: SSD cache restored output differs (expected for VLM block-boundary images)")
+            print(
+                "    NOTE: SSD cache restored output differs (expected for VLM block-boundary images)"
+            )
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -482,6 +505,7 @@ def _test_vlm_image_cache_consistency(vlm_model, processor, adapter):
 # ---------------------------------------------------------------------------
 # Test 2: Text-only cache consistency (on mRoPE VLM adapter)
 # ---------------------------------------------------------------------------
+
 
 def _test_text_only_cache_consistency(adapter, tokenizer):
     print("\n  [Test 2] Text-only cache on mRoPE adapter: store → hit → identical...")
@@ -495,19 +519,27 @@ def _test_text_only_cache_consistency(adapter, tokenizer):
     tmp_dir = tempfile.mkdtemp(prefix="omlx_mrope_text_cache_")
     try:
         tokens_fresh, _ = _generate_tokens(
-            adapter, tokenizer, token_ids,
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            adapter,
+            tokenizer,
+            token_ids,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
         )
         text_fresh = tokenizer.decode(tokens_fresh)
         print(f"    Fresh  ({len(tokens_fresh)} tokens): {text_fresh[:120]}...")
         _check_output_quality(text_fresh, "mRoPE text-only fresh")
 
         tokens_cached, cached_count = _generate_tokens(
-            adapter, tokenizer, token_ids,
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            adapter,
+            tokenizer,
+            token_ids,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
         )
         text_cached = tokenizer.decode(tokens_cached)
-        print(f"    Cached ({len(tokens_cached)} tokens, hit={cached_count}): {text_cached[:120]}...")
+        print(
+            f"    Cached ({len(tokens_cached)} tokens, hit={cached_count}): {text_cached[:120]}..."
+        )
         _check_output_quality(text_cached, "mRoPE text-only cached")
 
         match = tokens_fresh == tokens_cached
@@ -532,6 +564,7 @@ def _test_text_only_cache_consistency(adapter, tokenizer):
 # Test 3: Image → text-only state transition
 # ---------------------------------------------------------------------------
 
+
 def _test_image_to_text_transition(vlm_model, processor, adapter):
     import mlx.core as mx
 
@@ -549,7 +582,9 @@ def _test_image_to_text_transition(vlm_model, processor, adapter):
     assert embeds is not None
 
     tokens_img, _ = _generate_tokens(
-        adapter, tokenizer, token_ids_img,
+        adapter,
+        tokenizer,
+        token_ids_img,
         vlm_inputs_embeds=embeds,
         vlm_extra_kwargs=extra_kwargs,
         vlm_image_hash=image_hash,
@@ -559,11 +594,15 @@ def _test_image_to_text_transition(vlm_model, processor, adapter):
     _check_output_quality(text_img, "transition: image")
 
     # Step 2: text-only request (must not be contaminated by prior rope_deltas)
-    messages_txt = [{"role": "user", "content": "Explain what a stack data structure is."}]
+    messages_txt = [
+        {"role": "user", "content": "Explain what a stack data structure is."}
+    ]
     token_ids_txt = _apply_chat_template_as_ids(tokenizer, messages_txt)
 
     tokens_txt, _ = _generate_tokens(
-        adapter, tokenizer, token_ids_txt,
+        adapter,
+        tokenizer,
+        token_ids_txt,
     )
     text_txt = tokenizer.decode(tokens_txt)
     print(f"    Text response ({len(tokens_txt)} tokens): {text_txt[:120]}...")
@@ -575,6 +614,7 @@ def _test_image_to_text_transition(vlm_model, processor, adapter):
 # ---------------------------------------------------------------------------
 # Test 4: Mixed batch (2 image + 2 text-only)
 # ---------------------------------------------------------------------------
+
 
 def _test_mixed_batch(vlm_model, processor, adapter):
     import mlx.core as mx
@@ -619,7 +659,9 @@ def _test_mixed_batch(vlm_model, processor, adapter):
     vlm_embeds_list.append((None, None, None))
 
     results = _generate_batch(
-        adapter, tokenizer, prompt_list,
+        adapter,
+        tokenizer,
+        prompt_list,
         mode="concurrent",
         vlm_embeds_list=vlm_embeds_list,
     )
@@ -635,6 +677,7 @@ def _test_mixed_batch(vlm_model, processor, adapter):
 # ---------------------------------------------------------------------------
 # Test 5: Mixed batch with SSD cache — cache hit produces identical output
 # ---------------------------------------------------------------------------
+
 
 def _test_mixed_batch_cache(vlm_model, processor, adapter):
     import mlx.core as mx
@@ -663,9 +706,12 @@ def _test_mixed_batch_cache(vlm_model, processor, adapter):
     try:
         # Run 1: fresh (cache miss)
         results_fresh = _generate_batch(
-            adapter, tokenizer, prompt_list,
+            adapter,
+            tokenizer,
+            prompt_list,
             mode="concurrent",
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
             vlm_embeds_list=vlm_embeds_list,
         )
         print("    --- Fresh run ---")
@@ -676,9 +722,12 @@ def _test_mixed_batch_cache(vlm_model, processor, adapter):
 
         # Run 2: cache hit (same prompts + image hash)
         results_cached = _generate_batch(
-            adapter, tokenizer, prompt_list,
+            adapter,
+            tokenizer,
+            prompt_list,
             mode="concurrent",
-            ssd_cache_dir=tmp_dir, block_size=2048,
+            ssd_cache_dir=tmp_dir,
+            block_size=2048,
             vlm_embeds_list=vlm_embeds_list,
         )
         print("    --- Cached run ---")
@@ -706,7 +755,9 @@ def _test_mixed_batch_cache(vlm_model, processor, adapter):
             # differ due to SSD block-boundary KV cache differences.
             is_vlm = vlm_embeds_list[i][0] is not None
             if not match and not is_vlm:
-                pytest.fail(f"mRoPE mixed batch {rid} (text-only): SSD cache tokens differ")
+                pytest.fail(
+                    f"mRoPE mixed batch {rid} (text-only): SSD cache tokens differ"
+                )
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -716,6 +767,7 @@ def _test_mixed_batch_cache(vlm_model, processor, adapter):
 # ---------------------------------------------------------------------------
 # Test 6: Vision feature cache (image embedding SSD cache)
 # ---------------------------------------------------------------------------
+
 
 def _test_vision_feature_cache(vlm_model, processor, adapter):
     import mlx.core as mx
@@ -736,9 +788,7 @@ def _test_vision_feature_cache(vlm_model, processor, adapter):
     from mlx_vlm.utils import prepare_inputs
 
     try:
-        prompt = vlm_apply_template(
-            processor, vlm_model.config, messages, num_images=1
-        )
+        prompt = vlm_apply_template(processor, vlm_model.config, messages, num_images=1)
     except Exception:
         prompt = "Describe this image."
 
@@ -747,7 +797,8 @@ def _test_vision_feature_cache(vlm_model, processor, adapter):
     pixel_values = inputs.get("pixel_values")
     attention_mask = inputs.get("attention_mask")
     extra_inputs = {
-        k: v for k, v in inputs.items()
+        k: v
+        for k, v in inputs.items()
         if k not in ("input_ids", "attention_mask", "pixel_values") and v is not None
     }
 
@@ -787,7 +838,9 @@ def _test_vision_feature_cache(vlm_model, processor, adapter):
     )
     mx.eval(embed_fresh.inputs_embeds)
 
-    max_diff = mx.max(mx.abs(embed_cached.inputs_embeds - embed_fresh.inputs_embeds)).item()
+    max_diff = mx.max(
+        mx.abs(embed_cached.inputs_embeds - embed_fresh.inputs_embeds)
+    ).item()
     identical = mx.array_equal(embed_cached.inputs_embeds, embed_fresh.inputs_embeds)
     print(f"    Cached vs fresh: identical={identical}, max_diff={max_diff:.2e}")
 
@@ -803,7 +856,9 @@ def _test_vision_feature_cache(vlm_model, processor, adapter):
     image_hash = compute_image_hash([image])
 
     tokens, _ = _generate_tokens(
-        adapter, tokenizer, token_ids,
+        adapter,
+        tokenizer,
+        token_ids,
         vlm_inputs_embeds=embed_cached.inputs_embeds,
         vlm_extra_kwargs=extra_kwargs,
         vlm_image_hash=image_hash,
@@ -821,6 +876,7 @@ def _test_vision_feature_cache(vlm_model, processor, adapter):
 # Main test entry point
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "model_path",
     MROPE_MODELS,
@@ -834,9 +890,9 @@ def test_vlm_mrope_integration(model_path):
         pytest.skip(f"Model not found: {model_path}")
 
     model_name = Path(model_path).name
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"mRoPE VLM Integration Test: {model_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     from omlx.engine.vlm import _patch_video_processor_bug
     from omlx.models.vlm import VLMModelAdapter
@@ -846,6 +902,7 @@ def test_vlm_mrope_integration(model_path):
 
     try:
         from mlx_vlm.utils import load as vlm_load
+
         with _track_peak_memory("VLM model load"):
             vlm_model, processor = vlm_load(model_path)
     except Exception as e:
@@ -894,6 +951,6 @@ def test_vlm_mrope_integration(model_path):
         gc.collect()
         mx.clear_cache()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"ALL mRoPE TESTS PASSED: {model_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")

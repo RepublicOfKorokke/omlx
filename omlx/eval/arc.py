@@ -35,13 +35,15 @@ class ARCChallengeBenchmark(BaseBenchmark):
             labels = item.get("labels", [])
             if not choices or not labels:
                 continue
-            normalized.append({
-                "id": item.get("id", ""),
-                "question": item["question"],
-                "choices": choices,
-                "labels": labels,
-                "answer": item["answer"],
-            })
+            normalized.append(
+                {
+                    "id": item.get("id", ""),
+                    "question": item["question"],
+                    "choices": choices,
+                    "labels": labels,
+                    "answer": item["answer"],
+                }
+            )
 
         logger.info(f"ARC-Challenge: loaded {len(normalized)} questions")
 
@@ -57,8 +59,7 @@ class ARCChallengeBenchmark(BaseBenchmark):
         labels = item["labels"]
 
         parts = [
-            "Answer the following science question. "
-            "Answer with just the letter.\n",
+            "Answer the following science question. Answer with just the letter.\n",
             f"Question: {question}\n",
         ]
         for label, choice in zip(labels, choices):

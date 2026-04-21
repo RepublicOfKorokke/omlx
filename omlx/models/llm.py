@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GenerationOutput:
     """Output from text generation."""
+
     text: str
     tokens: list[int]
     finish_reason: str | None = None
@@ -27,6 +28,7 @@ class GenerationOutput:
 @dataclass
 class StreamingOutput:
     """Streaming output chunk."""
+
     text: str
     token: int
     finished: bool = False
@@ -94,8 +96,7 @@ class MLXLanguageModel:
 
         except ImportError:
             raise ImportError(
-                "mlx-lm is required for LLM inference. "
-                "Install with: pip install mlx-lm"
+                "mlx-lm is required for LLM inference. Install with: pip install mlx-lm"
             )
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
@@ -228,7 +229,7 @@ class MLXLanguageModel:
 
             yield StreamingOutput(
                 text=new_text,
-                token=response.token if hasattr(response, 'token') else 0,
+                token=response.token if hasattr(response, "token") else 0,
                 finished=finished,
                 finish_reason=finish_reason,
             )
@@ -265,7 +266,7 @@ class MLXLanguageModel:
             self.load()
 
         # Apply chat template
-        if hasattr(self.tokenizer, 'apply_chat_template'):
+        if hasattr(self.tokenizer, "apply_chat_template"):
             is_partial = detect_and_strip_partial(messages)
             # Build kwargs for apply_chat_template
             template_kwargs = {
@@ -298,9 +299,7 @@ class MLXLanguageModel:
                 )
         else:
             # Fallback: simple concatenation
-            prompt = "\n".join(
-                f"{msg['role']}: {msg['content']}" for msg in messages
-            )
+            prompt = "\n".join(f"{msg['role']}: {msg['content']}" for msg in messages)
             prompt += "\nassistant:"
 
         return self.generate(
@@ -323,14 +322,16 @@ class MLXLanguageModel:
         }
 
         # Try to get model config
-        if hasattr(self.model, 'config'):
+        if hasattr(self.model, "config"):
             config = self.model.config
-            info.update({
-                "vocab_size": getattr(config, 'vocab_size', None),
-                "hidden_size": getattr(config, 'hidden_size', None),
-                "num_layers": getattr(config, 'num_hidden_layers', None),
-                "num_heads": getattr(config, 'num_attention_heads', None),
-            })
+            info.update(
+                {
+                    "vocab_size": getattr(config, "vocab_size", None),
+                    "hidden_size": getattr(config, "hidden_size", None),
+                    "num_layers": getattr(config, "num_hidden_layers", None),
+                    "num_heads": getattr(config, "num_attention_heads", None),
+                }
+            )
 
         return info
 

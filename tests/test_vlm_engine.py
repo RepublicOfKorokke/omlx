@@ -17,6 +17,7 @@ import pytest
 
 try:
     import mlx.core as mx
+
     HAS_MLX = True
 except ImportError:
     HAS_MLX = False
@@ -25,6 +26,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Mock helpers
 # ---------------------------------------------------------------------------
+
 
 class MockVLMTokenizer:
     """Mock that mimics mlx-vlm's TokenizerWrapper __getattr__ delegation.
@@ -42,9 +44,7 @@ class MockVLMTokenizer:
     def __getattr__(self, attr):
         # Mimic mlx-vlm: delegate to HF tokenizer (which doesn't have
         # tool calling attrs), raising AttributeError
-        raise AttributeError(
-            f"'{type(self).__name__}' has no attribute '{attr}'"
-        )
+        raise AttributeError(f"'{type(self).__name__}' has no attribute '{attr}'")
 
     def get_vocab(self):
         return self._vocab
@@ -93,6 +93,7 @@ def _make_loaded_engine(model_type=None, tokenizer=None, **overrides):
 # TestInjectToolCalling
 # ---------------------------------------------------------------------------
 
+
 class TestInjectToolCalling:
     """Tests for VLMBatchedEngine._inject_tool_calling()."""
 
@@ -115,7 +116,7 @@ class TestInjectToolCalling:
         """Chat template with <tool_call>\\n<function= → qwen3_coder parser."""
         engine = _make_engine()
         tokenizer = MockVLMTokenizer(
-            chat_template='prefix <tool_call>\n<function= suffix',
+            chat_template="prefix <tool_call>\n<function= suffix",
             vocab={"<tool_call>": 100, "</tool_call>": 101},
         )
 
@@ -131,8 +132,10 @@ class TestInjectToolCalling:
 
         engine._inject_tool_calling(tokenizer)
 
-        assert not hasattr(tokenizer, "has_tool_calling") or \
-            getattr(tokenizer, "has_tool_calling", False) is False
+        assert (
+            not hasattr(tokenizer, "has_tool_calling")
+            or getattr(tokenizer, "has_tool_calling", False) is False
+        )
 
     def test_skips_when_no_tool_markers(self):
         """Chat template without any tool markers → no injection."""
@@ -203,6 +206,7 @@ class TestInjectToolCalling:
 # ---------------------------------------------------------------------------
 # TestApplyChatTemplate
 # ---------------------------------------------------------------------------
+
 
 class TestApplyChatTemplate:
     """Tests for VLMBatchedEngine._apply_chat_template()."""
@@ -301,6 +305,7 @@ class TestApplyChatTemplate:
 # TestApplyOcrPrompt
 # ---------------------------------------------------------------------------
 
+
 class TestApplyOcrPrompt:
     """Tests for VLMBatchedEngine._apply_ocr_prompt()."""
 
@@ -309,7 +314,10 @@ class TestApplyOcrPrompt:
             {
                 "role": "user",
                 "content": [
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
                     {"type": "text", "text": text},
                 ],
             }
@@ -323,7 +331,8 @@ class TestApplyOcrPrompt:
         result = engine._apply_ocr_prompt(messages)
 
         text_parts = [
-            p for p in result[0]["content"]
+            p
+            for p in result[0]["content"]
             if isinstance(p, dict) and p.get("type") == "text"
         ]
         assert len(text_parts) == 1
@@ -337,7 +346,8 @@ class TestApplyOcrPrompt:
         result = engine._apply_ocr_prompt(messages)
 
         text_parts = [
-            p for p in result[0]["content"]
+            p
+            for p in result[0]["content"]
             if isinstance(p, dict) and p.get("type") == "text"
         ]
         assert text_parts[0]["text"] == "Read this document"
@@ -349,7 +359,10 @@ class TestApplyOcrPrompt:
             {
                 "role": "user",
                 "content": [
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
                 ],
             }
         ]
@@ -367,7 +380,8 @@ class TestApplyOcrPrompt:
         result = engine._apply_ocr_prompt(messages)
 
         text_parts = [
-            p for p in result[0]["content"]
+            p
+            for p in result[0]["content"]
             if isinstance(p, dict) and p.get("type") == "text"
         ]
         assert text_parts[0]["text"] == "Text Recognition:"
@@ -380,7 +394,8 @@ class TestApplyOcrPrompt:
         result = engine._apply_ocr_prompt(messages)
 
         text_parts = [
-            p for p in result[0]["content"]
+            p
+            for p in result[0]["content"]
             if isinstance(p, dict) and p.get("type") == "text"
         ]
         assert text_parts[0]["text"] == "Convert the document to markdown."
@@ -402,7 +417,10 @@ class TestApplyOcrPrompt:
             {
                 "role": "user",
                 "content": [
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
                 ],
             }
         ]
@@ -410,7 +428,8 @@ class TestApplyOcrPrompt:
         result = engine._apply_ocr_prompt(messages)
 
         image_parts = [
-            p for p in result[0]["content"]
+            p
+            for p in result[0]["content"]
             if isinstance(p, dict) and p.get("type") == "image_url"
         ]
         assert len(image_parts) == 1
@@ -430,6 +449,7 @@ class TestApplyOcrPrompt:
 # TestProcessChatMessages
 # ---------------------------------------------------------------------------
 
+
 class TestProcessChatMessages:
     """Tests for VLMBatchedEngine._process_chat_messages()."""
 
@@ -447,7 +467,14 @@ class TestProcessChatMessages:
         messages = [{"role": "user", "content": "Hello"}]
         result = engine._process_chat_messages(messages, tools=None, kwargs={})
 
-        token_ids, vlm_embeds, vlm_kwargs, image_hash, image_cache_key_start, image_cache_key_ranges = result
+        (
+            token_ids,
+            vlm_embeds,
+            vlm_kwargs,
+            image_hash,
+            image_cache_key_start,
+            image_cache_key_ranges,
+        ) = result
         assert token_ids == [1, 2, 3]
         assert vlm_embeds is None
         assert vlm_kwargs is None
@@ -498,15 +525,30 @@ class TestProcessChatMessages:
             return_value=([1, 2, 3], MagicMock(), {}, "hash123", 12, [(12, "hash123")])
         )
 
-        messages = [{"role": "user", "content": [
-            {"type": "image_url", "image_url": {"url": "data:image/png;base64,x"}},
-            {"type": "text", "text": "Describe"},
-        ]}]
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,x"},
+                    },
+                    {"type": "text", "text": "Describe"},
+                ],
+            }
+        ]
 
         result = engine._process_chat_messages(messages, tools=None, kwargs={})
 
         engine._prepare_vision_inputs.assert_called_once()
-        token_ids, vlm_embeds, vlm_kwargs, image_hash, image_cache_key_start, image_cache_key_ranges = result
+        (
+            token_ids,
+            vlm_embeds,
+            vlm_kwargs,
+            image_hash,
+            image_cache_key_start,
+            image_cache_key_ranges,
+        ) = result
         assert token_ids == [1, 2, 3]
         assert image_hash == "hash123"
         assert image_cache_key_start == 12
@@ -527,7 +569,9 @@ class TestProcessChatMessages:
             return_value=([1, 2, 3], None, None, None, 0, [])
         )
 
-        tools = [{"type": "function", "function": {"name": "analyze", "parameters": {}}}]
+        tools = [
+            {"type": "function", "function": {"name": "analyze", "parameters": {}}}
+        ]
         messages = [{"role": "user", "content": "Describe"}]
 
         with patch("omlx.engine.vlm.convert_tools_for_template") as mock_convert:
@@ -565,6 +609,7 @@ class TestProcessChatMessages:
 # TestPrepareVisionInputs
 # ---------------------------------------------------------------------------
 
+
 class TestPrepareVisionInputs:
     """Tests for VLMBatchedEngine._prepare_vision_inputs()."""
 
@@ -598,6 +643,7 @@ class TestPrepareVisionInputs:
 
         messages = [{"role": "user", "content": "Describe"}]
         from PIL import Image
+
         images = [Image.new("RGB", (4, 4), "red")]
         tools = [{"type": "function", "function": {"name": "test"}}]
 
@@ -623,6 +669,7 @@ class TestPrepareVisionInputs:
 
         messages = [{"role": "user", "content": "Describe"}]
         from PIL import Image
+
         images = [Image.new("RGB", (4, 4), "red")]
 
         engine._prepare_vision_inputs(messages, images, tools=None)
@@ -637,6 +684,7 @@ class TestPrepareVisionInputs:
         engine._processor = MagicMock()
 
         from PIL import Image
+
         images = [Image.new("RGB", (4, 4), "red"), Image.new("RGB", (4, 4), "blue")]
         messages = [{"role": "user", "content": "Describe"}]
 
@@ -676,7 +724,10 @@ class TestFormatMessagesForVLMTemplate:
                 "role": "user",
                 "content": [
                     {"type": "text", "text": "What is this image?"},
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
                 ],
             },
         ]
@@ -696,8 +747,14 @@ class TestFormatMessagesForVLMTemplate:
             {
                 "role": "user",
                 "content": [
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,a"}},
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,b"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,a"},
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,b"},
+                    },
                     {"type": "text", "text": "Compare"},
                 ],
             },
@@ -756,7 +813,10 @@ class TestFormatMessagesForVLMTemplate:
                 "role": "user",
                 "content": [
                     {"type": "text", "text": "What is this?"},
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
                 ],
             },
         ]
@@ -776,6 +836,7 @@ class TestFormatMessagesForVLMTemplate:
 # ---------------------------------------------------------------------------
 # TestCountChatTokens
 # ---------------------------------------------------------------------------
+
 
 class TestCountChatTokens:
     """Tests for VLMBatchedEngine.count_chat_tokens()."""
@@ -805,7 +866,10 @@ class TestCountChatTokens:
             {
                 "role": "user",
                 "content": [
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,abc"},
+                    },
                     {"type": "text", "text": "Describe"},
                 ],
             }
@@ -819,6 +883,7 @@ class TestCountChatTokens:
 # ---------------------------------------------------------------------------
 # TestPartialModeVLM
 # ---------------------------------------------------------------------------
+
 
 class TestPartialModeVLM:
     """Tests for partial mode in VLM engine — always ignored."""
@@ -850,6 +915,7 @@ class TestPartialModeVLM:
 # TestGetStats
 # ---------------------------------------------------------------------------
 
+
 class TestGetStats:
     """Tests for VLMBatchedEngine.get_stats()."""
 
@@ -868,6 +934,7 @@ class TestGetStats:
 # ---------------------------------------------------------------------------
 # TestSplitVisionFeatures
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.skipif(not HAS_MLX, reason="mlx not installed")
 class TestSplitVisionFeatures:
@@ -920,7 +987,9 @@ class TestSplitVisionFeatures:
         grid_thw = mx.array([[1, 4, 4]])  # → 4 merged tokens
         features = mx.ones((99, 128))  # Mismatch
 
-        result = engine._split_vision_features(features, 1, {"image_grid_thw": grid_thw})
+        result = engine._split_vision_features(
+            features, 1, {"image_grid_thw": grid_thw}
+        )
         # Single image: returns [features] regardless of shape
         assert result is not None
 
@@ -935,6 +1004,7 @@ class TestSplitVisionFeatures:
 # ---------------------------------------------------------------------------
 # TestStopSafety
 # ---------------------------------------------------------------------------
+
 
 class TestStopSafety:
     """Tests for VLMBatchedEngine.stop() exception safety."""

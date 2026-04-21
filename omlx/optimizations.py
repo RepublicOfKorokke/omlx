@@ -41,7 +41,6 @@ __all__ = [
 ]
 
 
-
 def get_optimization_status() -> dict:
     """
     Get current hardware and MLX status.

@@ -241,4 +241,5 @@ async def require_admin(request: Request) -> bool:
 
 class _RedirectToLogin(Exception):
     """Raised to trigger a redirect to the admin login page."""
+
     pass

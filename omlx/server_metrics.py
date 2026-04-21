@@ -106,7 +106,9 @@ class ServerMetrics:
                 }
             logger.info("Loaded all-time stats from %s", self._stats_path)
         except (json.JSONDecodeError, TypeError, KeyError, ValueError, OSError) as e:
-            logger.warning("Failed to load all-time stats from %s: %s", self._stats_path, e)
+            logger.warning(
+                "Failed to load all-time stats from %s: %s", self._stats_path, e
+            )
 
     def save_alltime(self) -> None:
         """Save all-time stats to disk. Thread-safe."""
@@ -130,7 +132,9 @@ class ServerMetrics:
                 json.dump(data, f, indent=2)
             tmp_path.replace(self._stats_path)
         except OSError as e:
-            logger.warning("Failed to save all-time stats to %s: %s", self._stats_path, e)
+            logger.warning(
+                "Failed to save all-time stats to %s: %s", self._stats_path, e
+            )
 
     def _maybe_save_alltime(self) -> None:
         """Save all-time stats if enough time has passed. Called within lock."""
@@ -210,9 +214,7 @@ class ServerMetrics:
     ) -> Dict[str, Any]:
         """Build a metrics snapshot dict from raw values."""
         actual_processed = prompt - cached
-        avg_prefill_tps = (
-            actual_processed / prefill_dur if prefill_dur > 0 else 0.0
-        )
+        avg_prefill_tps = actual_processed / prefill_dur if prefill_dur > 0 else 0.0
         avg_generation_tps = completion / gen_dur if gen_dur > 0 else 0.0
         cache_efficiency = (cached / prompt * 100) if prompt > 0 else 0.0
 

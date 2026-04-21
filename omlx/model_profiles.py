@@ -53,15 +53,17 @@ MODEL_SPECIFIC_PROFILE_FIELDS = (
 )
 
 # Excluded — never stored in a profile or template.
-EXCLUDED_FROM_PROFILES = frozenset({
-    "is_pinned",
-    "is_default",
-    "display_name",
-    "description",
-    "model_alias",
-    "model_type_override",
-    "active_profile_name",
-})
+EXCLUDED_FROM_PROFILES = frozenset(
+    {
+        "is_pinned",
+        "is_default",
+        "display_name",
+        "description",
+        "model_alias",
+        "model_type_override",
+        "active_profile_name",
+    }
+)
 
 
 def filter_universal_fields(data: dict[str, Any]) -> dict[str, Any]:

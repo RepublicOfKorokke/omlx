@@ -9,7 +9,14 @@ from fastapi.testclient import TestClient
 
 from omlx.exceptions import ModelNotFoundError
 from omlx.model_settings import ModelSettings, ModelSettingsManager
-from omlx.server import EngineType, SamplingDefaults, ServerState, app, get_engine, get_sampling_params
+from omlx.server import (
+    EngineType,
+    SamplingDefaults,
+    ServerState,
+    app,
+    get_engine,
+    get_sampling_params,
+)
 from omlx.settings import GlobalSettings, ModelSettings as GlobalModelSettings
 
 
@@ -32,7 +39,18 @@ class TestGetSamplingParams:
 
     def test_defaults(self):
         """Test default values with no request or model params."""
-        temp, top_p, top_k, rep_penalty, min_p, presence_penalty, frequency_penalty, max_tokens, xtc_prob, xtc_thresh = get_sampling_params(None, None)
+        (
+            temp,
+            top_p,
+            top_k,
+            rep_penalty,
+            min_p,
+            presence_penalty,
+            frequency_penalty,
+            max_tokens,
+            xtc_prob,
+            xtc_thresh,
+        ) = get_sampling_params(None, None)
         assert temp == 1.0
         assert top_p == 0.95
         assert top_k == 0
@@ -44,8 +62,23 @@ class TestGetSamplingParams:
 
     def test_request_overrides(self):
         """Test request params override global defaults."""
-        temp, top_p, top_k, rep_penalty, min_p, presence_penalty, frequency_penalty, max_tokens, xtc_prob, xtc_thresh = get_sampling_params(
-            0.5, 0.8, req_min_p=0.1, req_presence_penalty=0.5, req_frequency_penalty=0.3,
+        (
+            temp,
+            top_p,
+            top_k,
+            rep_penalty,
+            min_p,
+            presence_penalty,
+            frequency_penalty,
+            max_tokens,
+            xtc_prob,
+            xtc_thresh,
+        ) = get_sampling_params(
+            0.5,
+            0.8,
+            req_min_p=0.1,
+            req_presence_penalty=0.5,
+            req_frequency_penalty=0.3,
             req_max_tokens=1024,
         )
         assert temp == 0.5
@@ -66,7 +99,10 @@ class TestGetSamplingParams:
     def test_xtc_request_passthrough(self):
         """Test XTC params pass through from request values."""
         *_, xtc_prob, xtc_thresh = get_sampling_params(
-            None, None, req_xtc_probability=0.5, req_xtc_threshold=0.1,
+            None,
+            None,
+            req_xtc_probability=0.5,
+            req_xtc_threshold=0.1,
         )
         assert xtc_prob == 0.5
         assert xtc_thresh == 0.1
@@ -74,7 +110,9 @@ class TestGetSamplingParams:
     def test_xtc_partial_override(self):
         """Test setting only xtc_probability uses safe default threshold."""
         *_, xtc_prob, xtc_thresh = get_sampling_params(
-            None, None, req_xtc_probability=0.3,
+            None,
+            None,
+            req_xtc_probability=0.3,
         )
         assert xtc_prob == 0.3
         assert xtc_thresh == 0.1
@@ -87,15 +125,28 @@ class TestGetSamplingParams:
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = ModelSettingsManager(Path(tmpdir))
             settings = ModelSettings(
-                temperature=0.3, top_k=50, repetition_penalty=1.2,
-                min_p=0.05, presence_penalty=0.3, max_tokens=2048,
+                temperature=0.3,
+                top_k=50,
+                repetition_penalty=1.2,
+                min_p=0.05,
+                presence_penalty=0.3,
+                max_tokens=2048,
             )
             manager.set_settings("test-model", settings)
             self._state.settings_manager = manager
 
-            temp, top_p, top_k, rep_penalty, min_p, presence_penalty, frequency_penalty, max_tokens, xtc_prob, xtc_thresh = get_sampling_params(
-                None, None, "test-model"
-            )
+            (
+                temp,
+                top_p,
+                top_k,
+                rep_penalty,
+                min_p,
+                presence_penalty,
+                frequency_penalty,
+                max_tokens,
+                xtc_prob,
+                xtc_thresh,
+            ) = get_sampling_params(None, None, "test-model")
             assert temp == 0.3
             assert top_p == 0.95  # falls back to global
             assert top_k == 50
@@ -116,8 +167,23 @@ class TestGetSamplingParams:
             manager.set_settings("test-model", settings)
             self._state.settings_manager = manager
 
-            temp, top_p, top_k, rep_penalty, min_p, presence_penalty, frequency_penalty, max_tokens, xtc_prob, xtc_thresh = get_sampling_params(
-                0.7, None, "test-model", req_min_p=0.1, req_max_tokens=4096,
+            (
+                temp,
+                top_p,
+                top_k,
+                rep_penalty,
+                min_p,
+                presence_penalty,
+                frequency_penalty,
+                max_tokens,
+                xtc_prob,
+                xtc_thresh,
+            ) = get_sampling_params(
+                0.7,
+                None,
+                "test-model",
+                req_min_p=0.1,
+                req_max_tokens=4096,
             )
             assert temp == 0.7  # request wins
             assert min_p == 0.1  # request wins over model
@@ -134,7 +200,9 @@ class TestGetSamplingParams:
             manager.set_settings("test-model", settings)
             self._state.settings_manager = manager
 
-            _, _, _, rep_penalty, _, _, _, _, _, _ = get_sampling_params(None, None, "test-model")
+            _, _, _, rep_penalty, _, _, _, _, _, _ = get_sampling_params(
+                None, None, "test-model"
+            )
             assert rep_penalty == 1.5
 
     def test_global_repetition_penalty(self):
@@ -269,9 +337,7 @@ class TestModelFallback:
 
             pool.get_engine = AsyncMock(side_effect=mock_get_engine)
         else:
-            pool.get_engine = AsyncMock(
-                side_effect=ModelNotFoundError("unknown", [])
-            )
+            pool.get_engine = AsyncMock(side_effect=ModelNotFoundError("unknown", []))
 
         self._state.engine_pool = pool
         return pool

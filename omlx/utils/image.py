@@ -106,7 +106,11 @@ def extract_images_from_messages(
                 part_type = getattr(part, "type", None)
 
             if part_type == "text":
-                text = part.get("text") if isinstance(part, dict) else getattr(part, "text", None)
+                text = (
+                    part.get("text")
+                    if isinstance(part, dict)
+                    else getattr(part, "text", None)
+                )
                 if text:
                     text_parts.append(text)
 
@@ -114,7 +118,8 @@ def extract_images_from_messages(
                 # OpenAI chat format: {"type":"image_url","image_url":{"url":"..."}}
                 # Responses-style format: {"type":"input_image","image_url":"..."}
                 image_url_obj = (
-                    part.get("image_url") if isinstance(part, dict)
+                    part.get("image_url")
+                    if isinstance(part, dict)
                     else getattr(part, "image_url", None)
                 )
                 if image_url_obj is None and isinstance(part, dict):

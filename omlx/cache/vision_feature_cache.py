@@ -49,9 +49,7 @@ def _composite_hash(model_name: str, image_hash: str) -> str:
     Using a hash avoids filesystem issues with long model paths
     and ensures uniform directory distribution.
     """
-    return hashlib.sha256(
-        f"{model_name}:{image_hash}".encode()
-    ).hexdigest()
+    return hashlib.sha256(f"{model_name}:{image_hash}".encode()).hexdigest()
 
 
 @dataclass
@@ -293,11 +291,11 @@ class VisionFeatureSSDCache:
 
             # Enqueue write
             try:
-                self._write_queue.put_nowait(
-                    (key, tensors_raw, metadata, file_path)
-                )
+                self._write_queue.put_nowait((key, tensors_raw, metadata, file_path))
             except queue.Full:
-                logger.debug("Vision cache write queue full, dropping write for %s", key[:32])
+                logger.debug(
+                    "Vision cache write queue full, dropping write for %s", key[:32]
+                )
                 with self._ssd_lock:
                     if key in self._ssd_index:
                         self._ssd_total_size -= self._ssd_index[key].file_size
@@ -361,9 +359,7 @@ class VisionFeatureSSDCache:
                     if tensor_key in arrays:
                         features.append(arrays[tensor_key])
                     else:
-                        logger.warning(
-                            "Missing tensor %s in %s", tensor_key, file_path
-                        )
+                        logger.warning("Missing tensor %s in %s", tensor_key, file_path)
                         return None
 
             # Update access time
@@ -432,14 +428,19 @@ class VisionFeatureSSDCache:
                     indexed += 1
 
                 except Exception as e:
-                    logger.debug("Failed to read vision cache file %s: %s", file_path, e)
+                    logger.debug(
+                        "Failed to read vision cache file %s: %s", file_path, e
+                    )
                     errors += 1
 
         if scanned > 0:
             logger.info(
                 "Vision feature SSD cache scan: scanned=%d, indexed=%d, errors=%d, "
                 "total_size=%.1fMB",
-                scanned, indexed, errors, self._ssd_total_size / (1024 * 1024),
+                scanned,
+                indexed,
+                errors,
+                self._ssd_total_size / (1024 * 1024),
             )
 
     # ── Background writer ───────────────────────────────────────────
@@ -462,9 +463,7 @@ class VisionFeatureSSDCache:
 
             try:
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                temp_path = file_path.with_name(
-                    file_path.stem + "_tmp.safetensors"
-                )
+                temp_path = file_path.with_name(file_path.stem + "_tmp.safetensors")
                 actual_size = _write_safetensors_no_mx(
                     str(temp_path), tensors_raw, metadata
                 )

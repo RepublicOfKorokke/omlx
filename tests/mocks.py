@@ -82,7 +82,9 @@ class MockBatchGenerator:
             List of MockResponse objects for each active sequence
         """
         # Use preset responses if available
-        if self._preset_responses and self._response_index < len(self._preset_responses):
+        if self._preset_responses and self._response_index < len(
+            self._preset_responses
+        ):
             responses = self._preset_responses[self._response_index]
             self._response_index += 1
             return responses
@@ -93,7 +95,9 @@ class MockBatchGenerator:
             if queue:
                 token = queue.popleft()
                 finish = "stop" if not queue else None
-                responses.append(MockResponse(uid=uid, token=token, finish_reason=finish))
+                responses.append(
+                    MockResponse(uid=uid, token=token, finish_reason=finish)
+                )
                 if not queue:
                     del self._queues[uid]
         return responses

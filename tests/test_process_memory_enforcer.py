@@ -147,9 +147,7 @@ class TestCheckAndEnforce:
     async def test_aborts_loading_model_when_no_lru_victim(self, enforcer):
         """Aborts a loading model when no LRU victim is available."""
         enforcer._engine_pool._find_lru_victim.return_value = None
-        loading_entry = _make_entry(
-            "loading-model", engine=None, is_loading=True
-        )
+        loading_entry = _make_entry("loading-model", engine=None, is_loading=True)
         enforcer._engine_pool._entries = {"loading-model": loading_entry}
 
         with patch("omlx.process_memory_enforcer.mx") as mock_mx:
@@ -172,9 +170,7 @@ class TestCheckAndEnforce:
         engine_b.abort_all_requests = AsyncMock(return_value=0)
         entry_a = _make_entry("model-a", engine=engine_a)
         entry_b = _make_entry("model-b", engine=engine_b)
-        loading_entry = _make_entry(
-            "loading-model", engine=None, is_loading=True
-        )
+        loading_entry = _make_entry("loading-model", engine=None, is_loading=True)
         enforcer._engine_pool._entries = {
             "model-a": entry_a,
             "model-b": entry_b,
@@ -226,9 +222,7 @@ class TestDisabledWhenMaxBytesZero:
     @pytest.mark.asyncio
     async def test_no_enforce_when_max_bytes_zero(self, mock_engine_pool):
         """No enforcement when max_bytes is 0 (disabled)."""
-        enforcer = ProcessMemoryEnforcer(
-            engine_pool=mock_engine_pool, max_bytes=0
-        )
+        enforcer = ProcessMemoryEnforcer(engine_pool=mock_engine_pool, max_bytes=0)
         engine = MagicMock()
         engine.abort_all_requests = AsyncMock(return_value=0)
         entry = _make_entry("model-a", engine=engine)
@@ -244,9 +238,7 @@ class TestDisabledWhenMaxBytesZero:
     @pytest.mark.asyncio
     async def test_no_enforce_when_max_bytes_negative(self, mock_engine_pool):
         """No enforcement when max_bytes is negative."""
-        enforcer = ProcessMemoryEnforcer(
-            engine_pool=mock_engine_pool, max_bytes=-1
-        )
+        enforcer = ProcessMemoryEnforcer(engine_pool=mock_engine_pool, max_bytes=-1)
         with patch("omlx.process_memory_enforcer.mx") as mock_mx:
             mock_mx.get_active_memory.return_value = 50 * 1024**3
             await enforcer._check_and_enforce()
@@ -254,13 +246,9 @@ class TestDisabledWhenMaxBytesZero:
         mock_engine_pool._unload_engine.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_propagate_zero_disables_inline_prefill_check(
-        self, mock_engine_pool
-    ):
+    async def test_propagate_zero_disables_inline_prefill_check(self, mock_engine_pool):
         """Propagating max_bytes=0 sets scheduler limit to 0 (disabled)."""
-        enforcer = ProcessMemoryEnforcer(
-            engine_pool=mock_engine_pool, max_bytes=0
-        )
+        enforcer = ProcessMemoryEnforcer(engine_pool=mock_engine_pool, max_bytes=0)
         bg = MagicMock(spec=[])
         bg._memory_limit_bytes = 999
         bg._memory_hard_limit_bytes = 999
@@ -339,9 +327,7 @@ class TestHardLimitCalculation:
 
     def test_hard_limit_zero_when_disabled(self, mock_engine_pool):
         """Hard limit is 0 when max_bytes <= 0 (disabled)."""
-        enforcer = ProcessMemoryEnforcer(
-            engine_pool=mock_engine_pool, max_bytes=0
-        )
+        enforcer = ProcessMemoryEnforcer(engine_pool=mock_engine_pool, max_bytes=0)
         assert enforcer._get_hard_limit_bytes() == 0
 
 
@@ -402,12 +388,8 @@ class TestSingleModelMemoryPressure:
         engine_idle = MagicMock()
         engine_idle.abort_all_requests = AsyncMock(return_value=0)
 
-        entry_active = _make_entry(
-            "active-model", engine=engine_active
-        )
-        entry_idle = _make_entry(
-            "idle-model", engine=engine_idle
-        )
+        entry_active = _make_entry("active-model", engine=engine_active)
+        entry_idle = _make_entry("idle-model", engine=engine_idle)
         enforcer._engine_pool._entries = {
             "active-model": entry_active,
             "idle-model": entry_idle,
@@ -427,9 +409,7 @@ class TestSingleModelMemoryPressure:
             ]
             await enforcer._check_and_enforce()
 
-        enforcer._engine_pool._unload_engine.assert_awaited_once_with(
-            "idle-model"
-        )
+        enforcer._engine_pool._unload_engine.assert_awaited_once_with("idle-model")
         # Idle model's requests aborted before eviction (0 requests)
         engine_idle.abort_all_requests.assert_awaited_once()
         # Active model's requests NOT aborted
@@ -467,9 +447,7 @@ class TestSingleModelMemoryPressure:
             await enforcer._check_and_enforce()
 
         # model-b evicted (requests aborted before eviction)
-        enforcer._engine_pool._unload_engine.assert_awaited_once_with(
-            "model-b"
-        )
+        enforcer._engine_pool._unload_engine.assert_awaited_once_with("model-b")
         # model-b's requests aborted before eviction
         engine_b.abort_all_requests.assert_awaited_once()
         # model-a's requests aborted (single-model path, second iteration)
