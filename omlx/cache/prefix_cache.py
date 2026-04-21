@@ -14,6 +14,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 try:
     import mlx.core as mx
+
     HAS_MLX = True
 except ImportError:
     HAS_MLX = False
@@ -137,28 +138,34 @@ class BlockAwarePrefixCache(CacheManager):
             Number of cache layers, or 0 if cannot be determined
         """
         # Prefer cache-layer count when available (hybrid-model safe).
-        make_cache = getattr(model, 'make_cache', None)
+        make_cache = getattr(model, "make_cache", None)
         if callable(make_cache):
             try:
                 cache_list = make_cache()
                 if isinstance(cache_list, list) and len(cache_list) > 0:
                     return len(cache_list)
             except Exception as e:
-                logger.debug(f"Could not determine cache layer count via make_cache(): {e}")
+                logger.debug(
+                    f"Could not determine cache layer count via make_cache(): {e}"
+                )
 
         # Fallback to architectural layer count for non-hybrid models.
-        if hasattr(model, 'layers'):
+        if hasattr(model, "layers"):
             return len(model.layers)
-        if hasattr(model, 'args') and hasattr(model.args, 'num_hidden_layers'):
+        if hasattr(model, "args") and hasattr(model.args, "num_hidden_layers"):
             return model.args.num_hidden_layers
-        if hasattr(model, 'config') and hasattr(model.config, 'num_hidden_layers'):
+        if hasattr(model, "config") and hasattr(model.config, "num_hidden_layers"):
             return model.config.num_hidden_layers
 
         # Cannot determine, return 0 to skip validation
-        logger.debug("Cannot determine model/cache num_layers, cache layer validation disabled")
+        logger.debug(
+            "Cannot determine model/cache num_layers, cache layer validation disabled"
+        )
         return 0
 
-    def set_paged_ssd_cache_manager(self, paged_ssd_cache_manager: Optional[PagedSSDCacheManager]) -> None:
+    def set_paged_ssd_cache_manager(
+        self, paged_ssd_cache_manager: Optional[PagedSSDCacheManager]
+    ) -> None:
         """
         Set the PagedSSDCacheManager for SSD storage.
 
@@ -195,16 +202,18 @@ class BlockAwarePrefixCache(CacheManager):
         if not first_block or not first_block.block_hash:
             return None
 
-        _, metadata = self.paged_ssd_cache.load_block_with_metadata(first_block.block_hash)
+        _, metadata = self.paged_ssd_cache.load_block_with_metadata(
+            first_block.block_hash
+        )
         if not metadata:
             return None
 
-        layer_cache_types = metadata.get('layer_cache_types')
+        layer_cache_types = metadata.get("layer_cache_types")
         # Note: CacheList layers containing RotatingKVCache sub-caches do NOT need
         # window padding. CacheList uses last-block-only storage with reject-on-partial
         # strategy, so the sliding window state is either fully restored (exact match)
         # or the entire cache is rejected (partial match).
-        if not layer_cache_types or 'RotatingKVCache' not in layer_cache_types:
+        if not layer_cache_types or "RotatingKVCache" not in layer_cache_types:
             return None
 
         model_cache_config = ModelCacheConfig.from_type_list(
@@ -212,13 +221,16 @@ class BlockAwarePrefixCache(CacheManager):
         )
 
         # Extract window_size from layer meta_states
-        layer_meta_states = metadata.get('layer_meta_states', [])
+        layer_meta_states = metadata.get("layer_meta_states", [])
         max_window_size = 0
         for idx, meta in enumerate(layer_meta_states):
             if not meta or len(meta) < 2:
                 continue
             # Check if this layer is RotatingKVCache
-            if idx < len(layer_cache_types) and layer_cache_types[idx] == 'RotatingKVCache':
+            if (
+                idx < len(layer_cache_types)
+                and layer_cache_types[idx] == "RotatingKVCache"
+            ):
                 # RotatingKVCache meta_state: (keep, max_size, offset, _idx)
                 window_size = int(meta[1])
                 if window_size > max_window_size:
@@ -303,8 +315,7 @@ class BlockAwarePrefixCache(CacheManager):
             self._tokens_saved += prefix_len
 
             logger.debug(
-                f"Prefix index hit for {request_id}: "
-                f"{prefix_len} tokens matched"
+                f"Prefix index hit for {request_id}: {prefix_len} tokens matched"
             )
 
             return block_table, remaining
@@ -353,11 +364,11 @@ class BlockAwarePrefixCache(CacheManager):
 
         # Check if cache_data contains extracted tensor states
         is_tensor_data = (
-            cache_data and
-            isinstance(cache_data, list) and
-            len(cache_data) > 0 and
-            isinstance(cache_data[0], dict) and
-            'state' in cache_data[0]
+            cache_data
+            and isinstance(cache_data, list)
+            and len(cache_data) > 0
+            and isinstance(cache_data[0], dict)
+            and "state" in cache_data[0]
         )
 
         # Extract cache type information for SSD storage
@@ -367,8 +378,7 @@ class BlockAwarePrefixCache(CacheManager):
             layer_cache_types = model_cache_config.get_type_names()
             # Extract meta_states if available in cache_data
             layer_meta_states = [
-                cache_data[i].get('meta_state', ())
-                if i < len(cache_data) else ()
+                cache_data[i].get("meta_state", ()) if i < len(cache_data) else ()
                 for i in range(model_cache_config.num_layers)
             ]
         elif is_tensor_data:
@@ -376,14 +386,14 @@ class BlockAwarePrefixCache(CacheManager):
             layer_cache_types = [
                 # Prefer class_name for TurboQuant (cache_type maps to 'KVCache'),
                 # fall back to cache_type for all standard mlx-lm types.
-                layer_state.get('class_name', layer_state.get('cache_type', 'KVCache'))
-                if layer_state.get('class_name', '') in ('TurboQuantKVCache', 'BatchTurboQuantKVCache')
-                else layer_state.get('cache_type', 'KVCache')
+                layer_state.get("class_name", layer_state.get("cache_type", "KVCache"))
+                if layer_state.get("class_name", "")
+                in ("TurboQuantKVCache", "BatchTurboQuantKVCache")
+                else layer_state.get("cache_type", "KVCache")
                 for layer_state in cache_data
             ]
             layer_meta_states = [
-                layer_state.get('meta_state', ())
-                for layer_state in cache_data
+                layer_state.get("meta_state", ()) for layer_state in cache_data
             ]
 
         # Get or create block table
@@ -485,8 +495,10 @@ class BlockAwarePrefixCache(CacheManager):
 
             # Compute chain hash for this block
             block.block_hash = compute_block_hash(
-                parent_hash, block_tokens,
-                extra_keys=block_extra_keys, model_name=self.paged_cache.model_name,
+                parent_hash,
+                block_tokens,
+                extra_keys=block_extra_keys,
+                model_name=self.paged_cache.model_name,
             )
 
             # Register hash for full blocks (for deduplication)
@@ -506,8 +518,8 @@ class BlockAwarePrefixCache(CacheManager):
                 # BatchGenerator.extract_cache() currently returns full-sequence cache.
                 # When existing_tokens > 0, slicing with relative indices would save
                 # wrong KV ranges for new blocks and corrupt future cache hits.
-                cache_uses_global_indices = (
-                    existing_tokens > 0 and cache_seq_len >= (existing_tokens + 1)
+                cache_uses_global_indices = existing_tokens > 0 and cache_seq_len >= (
+                    existing_tokens + 1
                 )
                 if cache_uses_global_indices:
                     cache_start = global_start
@@ -529,7 +541,7 @@ class BlockAwarePrefixCache(CacheManager):
                     block_table.num_tokens -= len(block_tokens)
                     break
 
-                is_last_block = (i == num_new_blocks - 1)
+                is_last_block = i == num_new_blocks - 1
 
                 # Look up intermediate snapshot for this block's boundary.
                 # The snapshot provides per-block ArraysCache state captured
@@ -540,7 +552,10 @@ class BlockAwarePrefixCache(CacheManager):
                     snapshot_cache_data = boundary_snapshots[block_boundary_tc]
 
                 block_kv_data = self._extract_block_tensor_slice(
-                    cache_data, cache_start, cache_end, model_cache_config,
+                    cache_data,
+                    cache_start,
+                    cache_end,
+                    model_cache_config,
                     is_last_block=is_last_block,
                     snapshot_cache_data=snapshot_cache_data,
                 )
@@ -555,7 +570,10 @@ class BlockAwarePrefixCache(CacheManager):
                     # correct per-boundary meta_state synchronously during
                     # prefill, so we prefer those.
                     block_meta = layer_meta_states
-                    if snapshot_cache_data is not None and layer_meta_states is not None:
+                    if (
+                        snapshot_cache_data is not None
+                        and layer_meta_states is not None
+                    ):
                         per_block = []
                         for lidx in range(len(layer_meta_states)):
                             if (
@@ -645,37 +663,40 @@ class BlockAwarePrefixCache(CacheManager):
         # Non-sliceable cache types use sliding window or have no sequence dimension
         # RotatingKVCache: sliding window, seq_len limited to max_size
         # ArraysCache: no traditional sequence dimension
-        non_sliceable_types = {'RotatingKVCache', 'ArraysCache', 'CacheList'}
+        non_sliceable_types = {"RotatingKVCache", "ArraysCache", "CacheList"}
 
         # Step 1: Search for a sliceable KVCache layer (full attention)
         for layer_idx, layer_state in enumerate(cache_data):
             try:
-                if 'state' not in layer_state:
+                if "state" not in layer_state:
                     continue
 
                 # Skip non-sliceable cache types (e.g., RotatingKVCache)
-                cache_type = layer_state.get('cache_type', '')
-                class_name = layer_state.get('class_name', '')
-                if cache_type in non_sliceable_types or class_name in non_sliceable_types:
+                cache_type = layer_state.get("cache_type", "")
+                class_name = layer_state.get("class_name", "")
+                if (
+                    cache_type in non_sliceable_types
+                    or class_name in non_sliceable_types
+                ):
                     continue
 
-                state = layer_state['state']
+                state = layer_state["state"]
                 keys = state[0] if isinstance(state, (list, tuple)) else state
                 # TurboQuant v2: NamedTuple state with .norms attribute
-                if hasattr(keys, 'norms') and hasattr(keys.norms, 'shape'):
+                if hasattr(keys, "norms") and hasattr(keys.norms, "shape"):
                     seq_len = keys.norms.shape[2]
                     logger.debug(
                         f"Found TurboQuantKVCache at layer {layer_idx} with seq_len={seq_len}"
                     )
                     return seq_len
                 # TurboQuant v2: SplitState with .low/.high sub-states
-                if hasattr(keys, 'low') and hasattr(keys.low, 'norms'):
+                if hasattr(keys, "low") and hasattr(keys.low, "norms"):
                     seq_len = keys.low.norms.shape[2]
                     logger.debug(
                         f"Found TurboQuantKVCache (split) at layer {layer_idx} with seq_len={seq_len}"
                     )
                     return seq_len
-                if not hasattr(keys, 'shape'):
+                if not hasattr(keys, "shape"):
                     continue
 
                 # KVCache: shape (batch, n_kv_heads, seq_len, head_dim) - 4D
@@ -694,18 +715,18 @@ class BlockAwarePrefixCache(CacheManager):
         # Only skip cache types that do not expose a sequence dimension here.
         # RotatingKVCache must be included because pure RotatingKVCache models
         # have no sliceable KVCache layers for Step 1 to find.
-        step2_skip_types = {'ArraysCache', 'CacheList'}
+        step2_skip_types = {"ArraysCache", "CacheList"}
         max_seq_len = 0
         for layer_idx, layer_state in enumerate(cache_data):
             try:
-                if 'state' not in layer_state:
+                if "state" not in layer_state:
                     continue
-                cache_type = layer_state.get('cache_type', '')
-                class_name = layer_state.get('class_name', '')
+                cache_type = layer_state.get("cache_type", "")
+                class_name = layer_state.get("class_name", "")
                 if cache_type in step2_skip_types or class_name in step2_skip_types:
                     continue
-                keys, _ = layer_state['state']
-                if hasattr(keys, 'shape') and len(keys.shape) == 4:
+                keys, _ = layer_state["state"]
+                if hasattr(keys, "shape") and len(keys.shape) == 4:
                     max_seq_len = max(max_seq_len, keys.shape[2])
             except Exception:
                 continue
@@ -717,17 +738,17 @@ class BlockAwarePrefixCache(CacheManager):
         # Step 3: CacheList fallback — check sub-states for seq_len
         # This handles all-CacheList models (e.g., deepseek_v32)
         for layer_state in cache_data:
-            if (layer_state.get('cache_type') == 'CacheList'
-                    or layer_state.get('class_name') == 'CacheList'):
-                sub_states = layer_state.get('state', [])
+            if (
+                layer_state.get("cache_type") == "CacheList"
+                or layer_state.get("class_name") == "CacheList"
+            ):
+                sub_states = layer_state.get("state", [])
                 for sub_state in sub_states:
                     if isinstance(sub_state, (list, tuple)) and len(sub_state) >= 2:
                         sub_keys = sub_state[0]
-                        if hasattr(sub_keys, 'shape') and len(sub_keys.shape) == 4:
+                        if hasattr(sub_keys, "shape") and len(sub_keys.shape) == 4:
                             seq_len = sub_keys.shape[2]
-                            logger.debug(
-                                f"Using CacheList sub-cache seq_len={seq_len}"
-                            )
+                            logger.debug(f"Using CacheList sub-cache seq_len={seq_len}")
                             return seq_len
 
         return 0
@@ -781,28 +802,33 @@ class BlockAwarePrefixCache(CacheManager):
         try:
             block_slices = []
             for layer_idx, layer_state in enumerate(cache_data):
-                if 'state' not in layer_state:
+                if "state" not in layer_state:
                     continue
 
                 # Determine cache type for this layer
-                cache_type_name = layer_state.get('cache_type', 'KVCache')
-                if model_cache_config and layer_idx < len(model_cache_config.layer_configs):
-                    cache_type_name = model_cache_config.layer_configs[layer_idx].class_name
+                cache_type_name = layer_state.get("cache_type", "KVCache")
+                if model_cache_config and layer_idx < len(
+                    model_cache_config.layer_configs
+                ):
+                    cache_type_name = model_cache_config.layer_configs[
+                        layer_idx
+                    ].class_name
 
                 handler = CacheTypeRegistry.get_handler_by_class_name(cache_type_name)
 
-                if cache_type_name in ('TurboQuantKVCache', 'BatchTurboQuantKVCache'):
+                if cache_type_name in ("TurboQuantKVCache", "BatchTurboQuantKVCache"):
                     # TurboQuant v2: NamedTuple state from mlx-vlm
                     from ..turboquant_kv import _slice_state_range, _state_length
-                    state = layer_state['state']
+
+                    state = layer_state["state"]
                     if not isinstance(state, (list, tuple)) or len(state) < 2:
                         block_slices.append((mx.zeros((1,)), mx.zeros((1,))))
                         continue
                     k_state, v_state = state[0], state[1]
                     # Unwrap _QuantizedStateProxy if present
-                    if hasattr(k_state, '_state'):
+                    if hasattr(k_state, "_state"):
                         k_state = k_state._state
-                    if hasattr(v_state, '_state'):
+                    if hasattr(v_state, "_state"):
                         v_state = v_state._state
                     seq_len = _state_length(k_state)
                     actual_end = min(end_idx, seq_len)
@@ -811,13 +837,15 @@ class BlockAwarePrefixCache(CacheManager):
                         continue
                     ks = _slice_state_range(k_state, start_idx, actual_end)
                     vs = _slice_state_range(v_state, start_idx, actual_end)
-                    block_slices.append((
-                        '__turboquant_v2__',
-                        (ks, vs),
-                    ))
+                    block_slices.append(
+                        (
+                            "__turboquant_v2__",
+                            (ks, vs),
+                        )
+                    )
                 elif handler.supports_block_slicing:
                     # Standard 4D KV cache slicing
-                    state = layer_state['state']
+                    state = layer_state["state"]
                     if not isinstance(state, (list, tuple)) or len(state) < 2:
                         # Placeholder from boundary snapshot (skipped sliceable layer).
                         continue
@@ -825,9 +853,9 @@ class BlockAwarePrefixCache(CacheManager):
 
                     # KV cache shape: (batch, n_kv_heads, seq_len, head_dim)
                     # Slice along seq_len dimension (axis 2)
-                    if not hasattr(keys, 'shape') or len(keys.shape) < 4:
+                    if not hasattr(keys, "shape") or len(keys.shape) < 4:
                         # Handle 3D case (no batch dimension)
-                        if hasattr(keys, 'shape') and len(keys.shape) == 3:
+                        if hasattr(keys, "shape") and len(keys.shape) == 3:
                             seq_len = keys.shape[1]  # (n_kv_heads, seq_len, head_dim)
                             actual_end = min(end_idx, seq_len)
                             if start_idx >= actual_end:
@@ -856,9 +884,12 @@ class BlockAwarePrefixCache(CacheManager):
 
                     # Detach slices so block-level eviction can free memory
                     block_slices.append(
-                        (self._clone_tensor(keys_slice), self._clone_tensor(values_slice))
+                        (
+                            self._clone_tensor(keys_slice),
+                            self._clone_tensor(values_slice),
+                        )
                     )
-                elif cache_type_name == 'RotatingKVCache':
+                elif cache_type_name == "RotatingKVCache":
                     # RotatingKVCache: last-block-only or boundary-snapshot strategy
                     has_valid_state = is_last_block or (
                         snapshot_cache_data is not None
@@ -869,11 +900,11 @@ class BlockAwarePrefixCache(CacheManager):
                         if (
                             snapshot_cache_data is not None
                             and layer_idx < len(snapshot_cache_data)
-                            and 'state' in snapshot_cache_data[layer_idx]
+                            and "state" in snapshot_cache_data[layer_idx]
                         ):
-                            state = snapshot_cache_data[layer_idx]['state']
+                            state = snapshot_cache_data[layer_idx]["state"]
                         else:
-                            state = layer_state['state']
+                            state = layer_state["state"]
                         if isinstance(state, (list, tuple)) and len(state) >= 2:
                             keys = state[0]
                             values = state[1]
@@ -888,16 +919,18 @@ class BlockAwarePrefixCache(CacheManager):
                     else:
                         # Non-last block without snapshot: store placeholder
                         block_slices.append((mx.zeros((1,)), mx.zeros((1,))))
-                elif cache_type_name == 'CacheList':
-                    state = layer_state['state']  # List[sub_state]
+                elif cache_type_name == "CacheList":
+                    state = layer_state["state"]  # List[sub_state]
                     if not isinstance(state, list) or len(state) == 0:
                         block_slices.append((mx.zeros((1,)), mx.zeros((1,))))
                         continue
 
                     # Check if all sub-caches are sliceable 4D KVCache tensors
                     all_sub_sliceable = all(
-                        isinstance(ss, (list, tuple)) and len(ss) >= 2
-                        and hasattr(ss[0], 'shape') and len(ss[0].shape) == 4
+                        isinstance(ss, (list, tuple))
+                        and len(ss) >= 2
+                        and hasattr(ss[0], "shape")
+                        and len(ss[0].shape) == 4
                         for ss in state
                     )
 
@@ -909,16 +942,24 @@ class BlockAwarePrefixCache(CacheManager):
                             seq_len = sub_keys.shape[2]
                             actual_end = min(end_idx, seq_len)
                             if start_idx >= actual_end:
-                                sub_tensors.append((
-                                    self._clone_tensor(sub_keys[:, :, 0:0, :]),
-                                    self._clone_tensor(sub_values[:, :, 0:0, :]),
-                                ))
+                                sub_tensors.append(
+                                    (
+                                        self._clone_tensor(sub_keys[:, :, 0:0, :]),
+                                        self._clone_tensor(sub_values[:, :, 0:0, :]),
+                                    )
+                                )
                             else:
-                                sub_tensors.append((
-                                    self._clone_tensor(sub_keys[:, :, start_idx:actual_end, :]),
-                                    self._clone_tensor(sub_values[:, :, start_idx:actual_end, :]),
-                                ))
-                        block_slices.append(('__cache_list__', sub_tensors))
+                                sub_tensors.append(
+                                    (
+                                        self._clone_tensor(
+                                            sub_keys[:, :, start_idx:actual_end, :]
+                                        ),
+                                        self._clone_tensor(
+                                            sub_values[:, :, start_idx:actual_end, :]
+                                        ),
+                                    )
+                                )
+                        block_slices.append(("__cache_list__", sub_tensors))
                     else:
                         # Non-sliceable sub-caches: last-block-only or snapshot
                         has_valid_state = is_last_block or (
@@ -930,20 +971,25 @@ class BlockAwarePrefixCache(CacheManager):
                             if (
                                 snapshot_cache_data is not None
                                 and layer_idx < len(snapshot_cache_data)
-                                and 'state' in snapshot_cache_data[layer_idx]
+                                and "state" in snapshot_cache_data[layer_idx]
                             ):
-                                source_state = snapshot_cache_data[layer_idx]['state']
+                                source_state = snapshot_cache_data[layer_idx]["state"]
                             else:
                                 source_state = state
                             if isinstance(source_state, list):
                                 sub_tensors = []
                                 for sub_state in source_state:
-                                    if isinstance(sub_state, (list, tuple)) and len(sub_state) >= 2:
-                                        sub_tensors.append((
-                                            self._clone_tensor(sub_state[0]),
-                                            self._clone_tensor(sub_state[1]),
-                                        ))
-                                block_slices.append(('__cache_list__', sub_tensors))
+                                    if (
+                                        isinstance(sub_state, (list, tuple))
+                                        and len(sub_state) >= 2
+                                    ):
+                                        sub_tensors.append(
+                                            (
+                                                self._clone_tensor(sub_state[0]),
+                                                self._clone_tensor(sub_state[1]),
+                                            )
+                                        )
+                                block_slices.append(("__cache_list__", sub_tensors))
                             else:
                                 block_slices.append((mx.zeros((1,)), mx.zeros((1,))))
                         else:
@@ -964,16 +1010,23 @@ class BlockAwarePrefixCache(CacheManager):
                         if (
                             snapshot_cache_data is not None
                             and layer_idx < len(snapshot_cache_data)
-                            and 'state' in snapshot_cache_data[layer_idx]
+                            and "state" in snapshot_cache_data[layer_idx]
                         ):
-                            state = snapshot_cache_data[layer_idx]['state']
+                            state = snapshot_cache_data[layer_idx]["state"]
                         else:
-                            state = layer_state['state']
+                            state = layer_state["state"]
                         if isinstance(state, (list, tuple)) and len(state) >= 2:
-                            conv_state = state[0] if state[0] is not None else mx.array([])
-                            ssm_state = state[1] if state[1] is not None else mx.array([])
+                            conv_state = (
+                                state[0] if state[0] is not None else mx.array([])
+                            )
+                            ssm_state = (
+                                state[1] if state[1] is not None else mx.array([])
+                            )
                             block_slices.append(
-                                (self._clone_tensor(conv_state), self._clone_tensor(ssm_state))
+                                (
+                                    self._clone_tensor(conv_state),
+                                    self._clone_tensor(ssm_state),
+                                )
                             )
                         else:
                             logger.debug(
@@ -1006,7 +1059,7 @@ class BlockAwarePrefixCache(CacheManager):
             return False
         if isinstance(data, tuple) and len(data) == 2:
             first = data[0]
-            if hasattr(first, 'shape') and first.shape == (1,):
+            if hasattr(first, "shape") and first.shape == (1,):
                 return True
         return False
 
@@ -1041,7 +1094,7 @@ class BlockAwarePrefixCache(CacheManager):
             cache_type = (
                 layer_cache_types[layer_idx]
                 if layer_idx < len(layer_cache_types)
-                else 'KVCache'
+                else "KVCache"
             )
             handler = CacheTypeRegistry.get_handler_by_class_name(cache_type)
             if handler.supports_block_slicing:
@@ -1219,9 +1272,7 @@ class BlockAwarePrefixCache(CacheManager):
             last_access=time.time(),
         )
 
-        logger.debug(
-            f"Forked cache: {source_request_id} -> {new_request_id}"
-        )
+        logger.debug(f"Forked cache: {source_request_id} -> {new_request_id}")
 
         return forked_table
 
@@ -1260,7 +1311,9 @@ class BlockAwarePrefixCache(CacheManager):
             return None
 
         if self.paged_ssd_cache is None:
-            logger.warning("Cannot reconstruct cache: PagedSSDCacheManager not configured")
+            logger.warning(
+                "Cannot reconstruct cache: PagedSSDCacheManager not configured"
+            )
             return None
 
         try:
@@ -1271,9 +1324,11 @@ class BlockAwarePrefixCache(CacheManager):
 
             # Cache type information from blocks
             layer_cache_types = None
-            first_block_meta_states = None   # meta_states from first block
-            last_block_meta_states = None    # meta_states from last block (for non-sliceable caches)
-            all_block_meta_states = []       # per-block meta_states for walk-back truncation
+            first_block_meta_states = None  # meta_states from first block
+            last_block_meta_states = (
+                None  # meta_states from last block (for non-sliceable caches)
+            )
+            all_block_meta_states = []  # per-block meta_states for walk-back truncation
 
             for idx, block_id in enumerate(block_table.block_ids):
                 block = self.paged_cache.allocated_blocks.get(block_id)
@@ -1293,8 +1348,8 @@ class BlockAwarePrefixCache(CacheManager):
                     break  # Stop here, use valid prefix
 
                 # Load with metadata for type information
-                block_data, block_metadata = self.paged_ssd_cache.load_block_with_metadata(
-                    block.block_hash
+                block_data, block_metadata = (
+                    self.paged_ssd_cache.load_block_with_metadata(block.block_hash)
                 )
                 if block_data is None:
                     logger.debug(
@@ -1313,7 +1368,7 @@ class BlockAwarePrefixCache(CacheManager):
 
                 # Validate model_name to prevent cross-model cache contamination
                 if block_metadata:
-                    block_model_name = block_metadata.get('model_name', '')
+                    block_model_name = block_metadata.get("model_name", "")
                     current_model_name = self.paged_cache.model_name
 
                     # If current model has a name, validate against block's model
@@ -1334,7 +1389,7 @@ class BlockAwarePrefixCache(CacheManager):
                             break  # Stop here, don't use this block
 
                     # Validate num_layers to catch cross-model cache issues
-                    block_num_layers = block_metadata.get('num_layers', 0)
+                    block_num_layers = block_metadata.get("num_layers", 0)
                     if self.expected_num_layers > 0 and block_num_layers > 0:
                         if block_num_layers != self.expected_num_layers:
                             logger.warning(
@@ -1346,11 +1401,11 @@ class BlockAwarePrefixCache(CacheManager):
                 # Extract type info from block metadata
                 if block_metadata:
                     if layer_cache_types is None:
-                        layer_cache_types = block_metadata.get('layer_cache_types')
+                        layer_cache_types = block_metadata.get("layer_cache_types")
 
                     # Track meta_states from first and last blocks
                     # Non-sliceable caches (RotatingKVCache) need last block's meta_state
-                    block_layer_meta_states = block_metadata.get('layer_meta_states')
+                    block_layer_meta_states = block_metadata.get("layer_meta_states")
                     if first_block_meta_states is None:
                         first_block_meta_states = block_layer_meta_states
                     # Always update last to track the most recent
@@ -1457,15 +1512,17 @@ class BlockAwarePrefixCache(CacheManager):
                 handler = CacheTypeRegistry.get_handler_by_class_name(cache_type_name)
 
                 # === CacheList: dedicated branch (before standard 2-tuple unpack) ===
-                if cache_type_name == 'CacheList':
+                if cache_type_name == "CacheList":
                     last_block_layer_data = all_block_data[-1][layer_idx]
 
                     # Placeholder detection (partial match → reject for
                     # non-sliceable CacheList, e.g. containing ArraysCache)
-                    if (isinstance(last_block_layer_data, tuple)
-                            and len(last_block_layer_data) == 2
-                            and hasattr(last_block_layer_data[0], 'shape')
-                            and last_block_layer_data[0].shape == (1,)):
+                    if (
+                        isinstance(last_block_layer_data, tuple)
+                        and len(last_block_layer_data) == 2
+                        and hasattr(last_block_layer_data[0], "shape")
+                        and last_block_layer_data[0].shape == (1,)
+                    ):
                         logger.info(
                             f"CacheList layer {layer_idx}: partial prefix match "
                             f"detected (placeholder). Rejecting cache."
@@ -1477,8 +1534,7 @@ class BlockAwarePrefixCache(CacheManager):
                     for block_data in all_block_data:
                         bd = block_data[layer_idx]
                         if isinstance(bd, list) and all(
-                            isinstance(t, (list, tuple)) and len(t) >= 2
-                            for t in bd
+                            isinstance(t, (list, tuple)) and len(t) >= 2 for t in bd
                         ):
                             cl_block_data.append(bd)
 
@@ -1513,10 +1569,16 @@ class BlockAwarePrefixCache(CacheManager):
                     # Build meta_state with correct offsets for reconstructed
                     # sequence length (may differ from original if partial match)
                     meta_state = None
-                    if last_block_meta_states and layer_idx < len(last_block_meta_states):
+                    if last_block_meta_states and layer_idx < len(
+                        last_block_meta_states
+                    ):
                         meta_state = last_block_meta_states[layer_idx]
 
-                    if meta_state and isinstance(meta_state, (list, tuple)) and len(meta_state) >= 2:
+                    if (
+                        meta_state
+                        and isinstance(meta_state, (list, tuple))
+                        and len(meta_state) >= 2
+                    ):
                         # Adjust sub-cache offsets to actual concatenated seq_len
                         class_names = meta_state[0]
                         adjusted_sub_metas = []
@@ -1524,7 +1586,10 @@ class BlockAwarePrefixCache(CacheManager):
                             actual_seq_len = concatenated_sub_states[j][0].shape[2]
                             if j < len(meta_state[1]):
                                 orig_sub_meta = meta_state[1][j]
-                                if isinstance(orig_sub_meta, (list, tuple)) and len(orig_sub_meta) > 0:
+                                if (
+                                    isinstance(orig_sub_meta, (list, tuple))
+                                    and len(orig_sub_meta) > 0
+                                ):
                                     # Replace offset (first element) with actual seq_len
                                     adjusted_sub_metas.append(
                                         (actual_seq_len,) + tuple(orig_sub_meta[1:])
@@ -1541,24 +1606,31 @@ class BlockAwarePrefixCache(CacheManager):
                         meta_state = (class_names, adjusted_sub_metas)
 
                     cache = handler.reconstruct_cache(
-                        {'sub_states': concatenated_sub_states}, meta_state
+                        {"sub_states": concatenated_sub_states}, meta_state
                     )
                     if cache is None:
-                        logger.error(f"CacheList layer {layer_idx}: reconstruction failed")
+                        logger.error(
+                            f"CacheList layer {layer_idx}: reconstruction failed"
+                        )
                         return None
                     reconstructed_caches.append(cache)
                     continue
 
                 # === TurboQuantKVCache: concat NamedTuple states, reconstruct ===
-                if cache_type_name in ('TurboQuantKVCache', 'BatchTurboQuantKVCache'):
-                    from ..turboquant_kv import _concat_state, _state_length, _rebuild_codecs
+                if cache_type_name in ("TurboQuantKVCache", "BatchTurboQuantKVCache"):
+                    from ..turboquant_kv import (
+                        _concat_state,
+                        _state_length,
+                        _rebuild_codecs,
+                    )
+
                     key_states, value_states = [], []
                     for block_data in all_block_data:
                         if layer_idx >= len(block_data):
                             continue
                         bd = block_data[layer_idx]
                         if isinstance(bd, tuple) and len(bd) == 2:
-                            if isinstance(bd[0], str) and bd[0] == '__turboquant_v2__':
+                            if isinstance(bd[0], str) and bd[0] == "__turboquant_v2__":
                                 ks, vs = bd[1]
                             else:
                                 ks, vs = bd
@@ -1577,29 +1649,33 @@ class BlockAwarePrefixCache(CacheManager):
                     try:
                         from mlx_vlm.turboquant import TurboQuantKVCache
                         from mlx_lm.models.cache import KVCache
+
                         tq_bits = 4.0
                         tq_seed = 0
                         ms = None
-                        if first_block_meta_states and layer_idx < len(first_block_meta_states):
+                        if first_block_meta_states and layer_idx < len(
+                            first_block_meta_states
+                        ):
                             ms = first_block_meta_states[layer_idx]
                         if isinstance(ms, (list, tuple)) and len(ms) >= 3:
                             tq_bits = float(ms[1])
                             tq_seed = int(ms[2])
-                        # Dequantize back to fp16 KVCache for merge compatibility.
+                        # Keep TurboQuantKVCache in quantized form to avoid memory doubling.
                         # TQ will be re-applied at decode start (lazy quantization).
+                        # This avoids the dequantize() step which creates FP16 copy.
                         tq = TurboQuantKVCache(bits=tq_bits, seed=tq_seed)
                         tq.keys = cat_ks
                         tq.values = cat_vs
                         tq.offset = _state_length(cat_ks)
                         _rebuild_codecs(tq, cat_ks, cat_vs)
-                        keys, values = tq.dequantize()
-                        cache = KVCache()
-                        cache.keys = keys
-                        cache.values = values
-                        cache.offset = keys.shape[2]
-                        reconstructed_caches.append(cache)
+
+                        # Use TurboQuantKVCache directly without dequantizing
+                        # This keeps memory at quantized level (3-bit vs 16-bit)
+                        reconstructed_caches.append(tq)
                     except Exception as e:
-                        logger.error(f"TQ layer {layer_idx}: reconstruction failed: {e}")
+                        logger.error(
+                            f"TQ layer {layer_idx}: reconstruction failed: {e}"
+                        )
                         return None
                     continue
 
@@ -1609,10 +1685,12 @@ class BlockAwarePrefixCache(CacheManager):
                     if layer_idx < len(block_data):
                         keys_slice, values_slice = block_data[layer_idx]
                         if keys_slice is not None and values_slice is not None:
-                            layer_states.append({
-                                'keys': keys_slice,
-                                'values': values_slice,
-                            })
+                            layer_states.append(
+                                {
+                                    "keys": keys_slice,
+                                    "values": values_slice,
+                                }
+                            )
 
                 if not layer_states:
                     logger.debug(
@@ -1625,11 +1703,15 @@ class BlockAwarePrefixCache(CacheManager):
                 if not handler.supports_block_slicing:
                     # Non-sliceable caches (RotatingKVCache, ArraysCache): use LAST block's meta_state
                     # because we use the last block's data (layer_states[-1])
-                    if last_block_meta_states and layer_idx < len(last_block_meta_states):
+                    if last_block_meta_states and layer_idx < len(
+                        last_block_meta_states
+                    ):
                         meta_state = last_block_meta_states[layer_idx]
                 else:
                     # Sliceable caches (KVCache): first block's meta_state is fine
-                    if first_block_meta_states and layer_idx < len(first_block_meta_states):
+                    if first_block_meta_states and layer_idx < len(
+                        first_block_meta_states
+                    ):
                         meta_state = first_block_meta_states[layer_idx]
 
                 # Reconstruct using appropriate handler
@@ -1640,15 +1722,14 @@ class BlockAwarePrefixCache(CacheManager):
                 else:
                     # Non-sliceable cache: use latest state
                     # States were stored as full state, use last one
-                    latest_keys = layer_states[-1].get('keys')
-                    latest_values = layer_states[-1].get('values')
+                    latest_keys = layer_states[-1].get("keys")
+                    latest_values = layer_states[-1].get("values")
 
-                    if cache_type_name == 'RotatingKVCache':
+                    if cache_type_name == "RotatingKVCache":
                         # RotatingKVCache: strict last-block restore.
                         # If the last matched block is a placeholder, we only
                         # had a partial prefix hit and must reject.
-                        if (hasattr(latest_keys, 'shape')
-                                and latest_keys.shape == (1,)):
+                        if hasattr(latest_keys, "shape") and latest_keys.shape == (1,):
                             logger.info(
                                 f"RotatingKVCache layer {layer_idx}: partial prefix "
                                 f"match detected (placeholder in last matched "
@@ -1658,9 +1739,9 @@ class BlockAwarePrefixCache(CacheManager):
                             return None
 
                         latest_state = {
-                            'keys': latest_keys,
-                            'values': latest_values,
-                            'meta_state': meta_state,
+                            "keys": latest_keys,
+                            "values": latest_values,
+                            "meta_state": meta_state,
                         }
                         cache = handler.reconstruct_cache(latest_state, meta_state)
                     else:
@@ -1671,8 +1752,7 @@ class BlockAwarePrefixCache(CacheManager):
                         # was not matched. We must reject the entire cache
                         # because GDN recurrent state cannot be partially
                         # reconstructed.
-                        if (hasattr(latest_keys, 'shape')
-                                and latest_keys.shape == (1,)):
+                        if hasattr(latest_keys, "shape") and latest_keys.shape == (1,):
                             logger.info(
                                 f"ArraysCache layer {layer_idx}: partial prefix "
                                 f"match detected (placeholder in last matched "
@@ -1683,7 +1763,7 @@ class BlockAwarePrefixCache(CacheManager):
 
                         # Exact match: last block has full state
                         latest_state = {
-                            'states': [latest_keys, latest_values],
+                            "states": [latest_keys, latest_values],
                         }
                         # Pass token_count for proper SizedArraysCache wrapping
                         cache = handler.reconstruct_cache(
@@ -1729,10 +1809,12 @@ class BlockAwarePrefixCache(CacheManager):
             if layer_cache_types:
                 kv_offsets = set()
                 for idx, c in enumerate(reconstructed_caches):
-                    if (idx < len(layer_cache_types)
-                            and layer_cache_types[idx] == 'KVCache'
-                            and hasattr(c, 'offset')
-                            and isinstance(getattr(c, 'offset', None), int)):
+                    if (
+                        idx < len(layer_cache_types)
+                        and layer_cache_types[idx] == "KVCache"
+                        and hasattr(c, "offset")
+                        and isinstance(getattr(c, "offset", None), int)
+                    ):
                         kv_offsets.add(c.offset)
                 if len(kv_offsets) > 1:
                     logger.warning(
@@ -1752,6 +1834,7 @@ class BlockAwarePrefixCache(CacheManager):
         except Exception as e:
             logger.warning(f"Failed to reconstruct cache: {e}")
             import traceback
+
             logger.debug(traceback.format_exc())
             return None
 
@@ -1772,8 +1855,10 @@ class BlockAwarePrefixCache(CacheManager):
         """
         try:
             # Collect keys and values
-            layer_keys = [s['keys'] for s in layer_states if s.get('keys') is not None]
-            layer_values = [s['values'] for s in layer_states if s.get('values') is not None]
+            layer_keys = [s["keys"] for s in layer_states if s.get("keys") is not None]
+            layer_values = [
+                s["values"] for s in layer_states if s.get("values") is not None
+            ]
 
             if not layer_keys or not layer_values:
                 return None
@@ -1795,11 +1880,16 @@ class BlockAwarePrefixCache(CacheManager):
             # Create appropriate cache object
             try:
                 from mlx_lm.models.cache import KVCache
+
                 cache = KVCache()
                 cache.keys = concat_keys
                 cache.values = concat_values
                 if len(concat_keys.shape) >= 3:
-                    cache.offset = concat_keys.shape[2] if len(concat_keys.shape) == 4 else concat_keys.shape[1]
+                    cache.offset = (
+                        concat_keys.shape[2]
+                        if len(concat_keys.shape) == 4
+                        else concat_keys.shape[1]
+                    )
                 else:
                     cache.offset = 0
                 return cache
@@ -1843,13 +1933,13 @@ class BlockAwarePrefixCache(CacheManager):
         for layer_idx, layer_data in enumerate(all_block_data[0]):
             # Skip non-KVCache layers
             if layer_cache_types and layer_idx < len(layer_cache_types):
-                if layer_cache_types[layer_idx] != 'KVCache':
+                if layer_cache_types[layer_idx] != "KVCache":
                     continue
             # Guard against non-tuple formats (CacheList stores List[Tuple])
             if not isinstance(layer_data, tuple) or len(layer_data) != 2:
                 continue
             keys, _ = layer_data
-            if hasattr(keys, 'shape') and len(keys.shape) == 4:
+            if hasattr(keys, "shape") and len(keys.shape) == 4:
                 return (keys.shape[1], keys.shape[3])
 
         return None
@@ -1896,12 +1986,15 @@ class BlockAwarePrefixCache(CacheManager):
         # BatchRotatingKVCache.merge() to create unmasked zero-filled buffers
         # that dilute attention scores during prefill.
         if _PrefillReadyRotatingKVCache is None:
+
             class _Impl(RotatingKVCache):
                 """RotatingKVCache that reports actual buffer size for merge."""
+
                 def size(self):
                     if self.keys is not None and self.keys.shape[2] == 0:
                         return 0
                     return super().size()
+
             _PrefillReadyRotatingKVCache = _Impl
 
         if meta_state and len(meta_state) >= 2:
@@ -1965,7 +2058,7 @@ class BlockAwarePrefixCache(CacheManager):
         # ArraysCache: generic array cache used by some hybrid models (e.g., Qwen3-Next)
         # RotatingKVCache: uses circular buffer with fixed max_size, cannot be sliced
         # CacheList: composite cache with List[Tuple] format, not (keys, values) tuple
-        non_sliceable_types = {'ArraysCache', 'RotatingKVCache', 'CacheList'}
+        non_sliceable_types = {"ArraysCache", "RotatingKVCache", "CacheList"}
 
         expected_seq_len = None
 
@@ -1977,7 +2070,7 @@ class BlockAwarePrefixCache(CacheManager):
                     cache_type = layer_cache_types[layer_idx]
 
                 # CacheList: sub-cache list format, skip standard (keys, values) unpacking
-                if cache_type == 'CacheList':
+                if cache_type == "CacheList":
                     # CacheList data is either List[Tuple] (last block) or Tuple (placeholder)
                     if isinstance(layer_data, list):
                         continue  # Sub-cache list — valid
@@ -1999,7 +2092,7 @@ class BlockAwarePrefixCache(CacheManager):
                     continue
 
                 # Check shape consistency for sliceable types (KVCache, RotatingKVCache)
-                if hasattr(keys, 'shape') and len(keys.shape) >= 3:
+                if hasattr(keys, "shape") and len(keys.shape) >= 3:
                     seq_len = keys.shape[2]
                     if expected_seq_len is None:
                         expected_seq_len = seq_len
@@ -2082,7 +2175,11 @@ class BlockAwarePrefixCache(CacheManager):
 
             parent_hash = block_hash
             prefix_len += len(block_tokens)
-            self._prefix_index[block_hash] = (prefix_len, tuple(block_ids[: i + 1]), i + 1)
+            self._prefix_index[block_hash] = (
+                prefix_len,
+                tuple(block_ids[: i + 1]),
+                i + 1,
+            )
 
     def get_stats(self) -> PrefixCacheStats:
         """
@@ -2116,7 +2213,9 @@ class BlockAwarePrefixCache(CacheManager):
         return {
             "hits": self._hits,
             "misses": self._misses,
-            "hit_rate": self._hits / (self._hits + self._misses) if (self._hits + self._misses) > 0 else 0,
+            "hit_rate": self._hits / (self._hits + self._misses)
+            if (self._hits + self._misses) > 0
+            else 0,
             "tokens_saved": self._tokens_saved,
             "partial_block_skips": self._partial_block_skips,
             "partial_tokens_skipped": self._partial_tokens_skipped,
