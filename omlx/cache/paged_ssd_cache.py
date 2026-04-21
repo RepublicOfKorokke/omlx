@@ -62,7 +62,7 @@ def _compute_max_pending_writes() -> int:
     """
     try:
         total_bytes = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
-        total_gb = total_bytes / (1024 ** 3)
+        total_gb = total_bytes / (1024**3)
         return max(32, min(256, int(total_gb / 2)))
     except (ValueError, OSError):
         return 32  # Safe default
@@ -493,7 +493,7 @@ class PagedSSDCacheIndex:
         with self._lock:
             entry = self._index.get(block_hash)
             if entry is not None:
-                self._total_size += (actual_size - entry.file_size)
+                self._total_size += actual_size - entry.file_size
                 entry.file_size = actual_size
 
     def get_all_hashes(self) -> List[bytes]:
@@ -633,10 +633,10 @@ class PagedSSDCacheManager(CacheManager):
         Entries from _promote_to_hot_cache() may use 'arrays' (mx.array objects
         loaded from SSD, not from active inference — safe to retain).
         """
-        if 'arrays' in entry:
-            return sum(arr.nbytes for arr in entry['arrays'].values())
-        if 'tensors_raw' in entry:
-            return sum(len(raw) for raw, _, _ in entry['tensors_raw'].values())
+        if "arrays" in entry:
+            return sum(arr.nbytes for arr in entry["arrays"].values())
+        if "tensors_raw" in entry:
+            return sum(len(raw) for raw, _, _ in entry["tensors_raw"].values())
         return 0
 
     def _hot_cache_put(self, block_hash: bytes, entry: Dict) -> None:
@@ -666,8 +666,15 @@ class PagedSSDCacheManager(CacheManager):
             self._hot_cache_total_bytes += entry_size
 
         # Flush evicted entries to SSD outside the hot cache lock
-        for evicted_hash, evicted in evicted_entries:
-            self._enqueue_ssd_write(evicted_hash, evicted)
+        # Skip SSD write when hot_cache_only=True (evicted entries are discarded)
+        if not self._hot_cache_only:
+            for evicted_hash, evicted in evicted_entries:
+                self._enqueue_ssd_write(evicted_hash, evicted)
+        elif evicted_entries:
+            logger.debug(
+                f"Discarding {len(evicted_entries)} evicted blocks "
+                f"(hot_cache_only=True)"
+            )
 
     def _enqueue_ssd_write(self, block_hash: bytes, entry: Dict) -> bool:
         """Enqueue a hot cache entry for SSD background write.
@@ -678,14 +685,14 @@ class PagedSSDCacheManager(CacheManager):
         if self._hot_cache_only:
             return False
 
-        blk_meta = entry.get('block_metadata')
+        blk_meta = entry.get("block_metadata")
         if blk_meta is None:
             return False
         file_path = blk_meta.file_path
-        tensors_raw = entry.get('tensors_raw', {})
+        tensors_raw = entry.get("tensors_raw", {})
         if not tensors_raw:
             return False
-        metadata = entry['file_metadata']
+        metadata = entry["file_metadata"]
 
         # Add to SSD index now that block is being written to SSD
         if not self._index.contains(block_hash):
@@ -695,9 +702,7 @@ class PagedSSDCacheManager(CacheManager):
         with self._pending_write_hashes_lock:
             self._pending_write_hashes.add(block_hash)
         try:
-            self._write_queue.put_nowait(
-                (block_hash, tensors_raw, metadata, file_path)
-            )
+            self._write_queue.put_nowait((block_hash, tensors_raw, metadata, file_path))
             logger.debug(
                 f"Evicted hot cache block to SSD write queue: "
                 f"{block_hash.hex()[:16]}..."
@@ -705,8 +710,7 @@ class PagedSSDCacheManager(CacheManager):
             return True
         except queue.Full:
             logger.warning(
-                f"SSD write queue full, dropping evicted block "
-                f"{block_hash.hex()[:16]}"
+                f"SSD write queue full, dropping evicted block {block_hash.hex()[:16]}"
             )
             self._index.remove(block_hash)
             with self._pending_write_hashes_lock:
@@ -727,7 +731,7 @@ class PagedSSDCacheManager(CacheManager):
             old = self._hot_cache.pop(block_hash, None)
             if old:
                 self._hot_cache_total_bytes -= self._hot_cache_entry_size(
-                    old['tensors_raw']
+                    old["tensors_raw"]
                 )
 
     def _promote_to_hot_cache(
@@ -743,11 +747,13 @@ class PagedSSDCacheManager(CacheManager):
             for name, arr in arrays.items():
                 promoted_raw[name] = _extract_tensor_bytes(arr)
             entry = {
-                'tensors_raw': promoted_raw,
-                'file_metadata': file_metadata if isinstance(file_metadata, dict) else {},
-                'num_layers': metadata.num_layers,
-                'layer_cache_types': metadata.layer_cache_types,
-                'block_metadata': metadata,
+                "tensors_raw": promoted_raw,
+                "file_metadata": (
+                    file_metadata if isinstance(file_metadata, dict) else {}
+                ),
+                "num_layers": metadata.num_layers,
+                "layer_cache_types": metadata.layer_cache_types,
+                "block_metadata": metadata,
             }
             self._hot_cache_put(block_hash, entry)
             self._stats["hot_cache_promotions"] += 1
@@ -894,9 +900,7 @@ class PagedSSDCacheManager(CacheManager):
             try:
                 # Write safetensors file using pure Python (no mx/Metal API)
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                temp_path = file_path.with_name(
-                    file_path.stem + "_tmp.safetensors"
-                )
+                temp_path = file_path.with_name(file_path.stem + "_tmp.safetensors")
                 actual_size = _write_safetensors_no_mx(
                     str(temp_path), tensors_raw, metadata
                 )
@@ -929,8 +933,7 @@ class PagedSSDCacheManager(CacheManager):
                     )
                 else:
                     logger.error(
-                        f"Background write failed for "
-                        f"{block_hash.hex()[:16]}: {e}"
+                        f"Background write failed for {block_hash.hex()[:16]}: {e}"
                     )
                 self._stats["errors"] += 1
                 # Remove from index since file wasn't written
@@ -1001,8 +1004,7 @@ class PagedSSDCacheManager(CacheManager):
         # (not needed for hot cache write-back mode)
         if not self._hot_cache_enabled and self._write_queue.full():
             logger.warning(
-                f"SSD cache write queue full, skipping save for "
-                f"{block_hash.hex()[:16]}"
+                f"SSD cache write queue full, skipping save for {block_hash.hex()[:16]}"
             )
             return False
 
@@ -1017,9 +1019,12 @@ class PagedSSDCacheManager(CacheManager):
             arrays = {}
             cache_list_meta = {}  # Temporary dict for CacheList sub_count
             for i, layer_data in enumerate(cache_data):
-                if (isinstance(layer_data, tuple) and len(layer_data) == 2
-                        and isinstance(layer_data[0], str)
-                        and layer_data[0] == '__cache_list__'):
+                if (
+                    isinstance(layer_data, tuple)
+                    and len(layer_data) == 2
+                    and isinstance(layer_data[0], str)
+                    and layer_data[0] == "__cache_list__"
+                ):
                     # CacheList: sub-indexed tensors
                     sub_tensors = layer_data[1]
                     for j, (sub_keys, sub_values) in enumerate(sub_tensors):
@@ -1038,9 +1043,12 @@ class PagedSSDCacheManager(CacheManager):
                         else:
                             arrays[f"layer_{i}_sub_{j}_values"] = sub_values
                     cache_list_meta[f"layer_{i}_sub_count"] = str(len(sub_tensors))
-                elif (isinstance(layer_data, tuple) and len(layer_data) == 2
-                        and isinstance(layer_data[0], str)
-                        and layer_data[0] in ('__turboquant__', '__turboquant_v2__')):
+                elif (
+                    isinstance(layer_data, tuple)
+                    and len(layer_data) == 2
+                    and isinstance(layer_data[0], str)
+                    and layer_data[0] in ("__turboquant__", "__turboquant_v2__")
+                ):
                     # TurboQuant v2: NamedTuple states (ks, vs)
                     ks, vs = layer_data[1]
                     # Flatten NamedTuple fields into individual tensors
@@ -1060,15 +1068,15 @@ class PagedSSDCacheManager(CacheManager):
                     keys, values = layer_data
                     if _has_zero_dim(keys):
                         arrays[f"layer_{i}_keys"] = mx.zeros((1,))
-                        cache_list_meta[f"layer_{i}_keys_zero_dim"] = (
-                            _encode_shape(keys.shape)
+                        cache_list_meta[f"layer_{i}_keys_zero_dim"] = _encode_shape(
+                            keys.shape
                         )
                     else:
                         arrays[f"layer_{i}_keys"] = keys
                     if _has_zero_dim(values):
                         arrays[f"layer_{i}_values"] = mx.zeros((1,))
-                        cache_list_meta[f"layer_{i}_values_zero_dim"] = (
-                            _encode_shape(values.shape)
+                        cache_list_meta[f"layer_{i}_values_zero_dim"] = _encode_shape(
+                            values.shape
                         )
                     else:
                         arrays[f"layer_{i}_values"] = values
@@ -1095,7 +1103,9 @@ class PagedSSDCacheManager(CacheManager):
 
             # Materialize lazy arrays on the inference thread (Metal-safe).
             if arrays:
-                mx.eval(*arrays.values())  # noqa: S307 — MLX tensor eval, not Python eval
+                mx.eval(
+                    *arrays.values()
+                )  # noqa: S307 — MLX tensor eval, not Python eval
 
             # Extract raw bytes from evaluated tensors on the inference thread.
             # This is Metal-safe because it uses memoryview() on evaluated arrays.
@@ -1108,9 +1118,7 @@ class PagedSSDCacheManager(CacheManager):
                 tensors_raw[name] = _extract_tensor_bytes(arr)
 
             # Estimate file size from raw bytes (actual size set by background writer)
-            estimated_size = (
-                sum(len(raw) for raw, _, _ in tensors_raw.values()) + 1024
-            )
+            estimated_size = sum(len(raw) for raw, _, _ in tensors_raw.values()) + 1024
 
             now = time.time()
             block_metadata = PagedSSDBlockMetadata(
@@ -1135,11 +1143,11 @@ class PagedSSDCacheManager(CacheManager):
             # Storing live inference arrays here would accumulate GPU memory
             # under a large hot cache and cause kernel panics (IOGPUMemory underflow).
             cache_entry = {
-                'tensors_raw': tensors_raw,
-                'file_metadata': metadata,
-                'num_layers': len(cache_data),
-                'layer_cache_types': layer_cache_types,
-                'block_metadata': block_metadata,
+                "tensors_raw": tensors_raw,
+                "file_metadata": metadata,
+                "num_layers": len(cache_data),
+                "layer_cache_types": layer_cache_types,
+                "block_metadata": block_metadata,
             }
 
             if self._hot_cache_enabled:
@@ -1223,7 +1231,7 @@ class PagedSSDCacheManager(CacheManager):
                 else None
             )
 
-            if cache_type == 'CacheList':
+            if cache_type == "CacheList":
                 sub_count_key = f"layer_{i}_sub_count"
                 sub_count = 0
                 if file_metadata and sub_count_key in file_metadata:
@@ -1268,10 +1276,15 @@ class PagedSSDCacheManager(CacheManager):
                     TurboQuantPolarProdState,
                     TurboQuantSplitState,
                 )
+
                 key_type = file_metadata.get(f"layer_{i}_tq_key_type", "")
                 value_type = file_metadata.get(f"layer_{i}_tq_value_type", "")
-                key_fields = file_metadata.get(f"layer_{i}_tq_key_fields", "").split(",")
-                value_fields = file_metadata.get(f"layer_{i}_tq_value_fields", "").split(",")
+                key_fields = file_metadata.get(f"layer_{i}_tq_key_fields", "").split(
+                    ","
+                )
+                value_fields = file_metadata.get(
+                    f"layer_{i}_tq_value_fields", ""
+                ).split(",")
                 _type_map = {
                     "TurboQuantMSEState": TurboQuantMSEState,
                     "TurboQuantProdState": TurboQuantProdState,
@@ -1286,7 +1299,7 @@ class PagedSSDCacheManager(CacheManager):
                     v_tensors = [arrays[f"layer_{i}_tq_v_{f}"] for f in value_fields]
                     ks = k_cls(*k_tensors)
                     vs = v_cls(*v_tensors)
-                    cache_data.append(('__turboquant_v2__', (ks, vs)))
+                    cache_data.append(("__turboquant_v2__", (ks, vs)))
                 except (KeyError, TypeError) as e:
                     logger.error(f"TurboQuant v2 layer {i}: reconstruction failed: {e}")
                     return None
@@ -1312,7 +1325,7 @@ class PagedSSDCacheManager(CacheManager):
 
     @staticmethod
     def _arrays_from_tensors_raw(
-        tensors_raw: Dict[str, Tuple[bytes, str, List[int]]]
+        tensors_raw: Dict[str, Tuple[bytes, str, List[int]]],
     ) -> Dict[str, "mx.array"]:
         """Convert raw bytes dict back to mx.array dict for _reconstruct_cache_data.
 
@@ -1356,19 +1369,21 @@ class PagedSSDCacheManager(CacheManager):
             # Entries from _promote_to_hot_cache() store mx.array objects directly
             # (safe — they come from SSD loads, not active inference).
             # Entries from save_block() use tensors_raw (raw bytes).
-            arrays = entry.get('arrays') or self._arrays_from_tensors_raw(entry['tensors_raw'])
+            arrays = entry.get("arrays") or self._arrays_from_tensors_raw(
+                entry["tensors_raw"]
+            )
             cache_data = self._reconstruct_cache_data(
-                arrays, entry['file_metadata'],
-                entry['num_layers'], entry['layer_cache_types'],
+                arrays,
+                entry["file_metadata"],
+                entry["num_layers"],
+                entry["layer_cache_types"],
             )
             if cache_data is not None:
                 self._index.touch(block_hash)
                 self._stats["loads"] += 1
                 self._stats["hits"] += 1
                 self._stats["hot_cache_hits"] += 1
-                logger.debug(
-                    f"Loaded block from hot cache: {block_hash.hex()[:16]}..."
-                )
+                logger.debug(f"Loaded block from hot cache: {block_hash.hex()[:16]}...")
             return cache_data
 
         # Check index
@@ -1395,14 +1410,21 @@ class PagedSSDCacheManager(CacheManager):
 
             # Get layer_cache_types for CacheList detection
             layer_cache_types = metadata.layer_cache_types
-            if not layer_cache_types and file_metadata and "layer_cache_types" in file_metadata:
+            if (
+                not layer_cache_types
+                and file_metadata
+                and "layer_cache_types" in file_metadata
+            ):
                 try:
                     layer_cache_types = json.loads(file_metadata["layer_cache_types"])
                 except (json.JSONDecodeError, TypeError):
                     layer_cache_types = None
 
             cache_data = self._reconstruct_cache_data(
-                arrays, file_metadata, metadata.num_layers, layer_cache_types,
+                arrays,
+                file_metadata,
+                metadata.num_layers,
+                layer_cache_types,
             )
             if cache_data is None:
                 return None
@@ -1463,20 +1485,24 @@ class PagedSSDCacheManager(CacheManager):
         # Check hot cache first (in-memory, no I/O)
         entry = self._hot_cache_get(block_hash)
         if entry is not None:
-            blk_meta = entry['block_metadata']
-            arrays = entry.get('arrays') or self._arrays_from_tensors_raw(entry['tensors_raw'])
+            blk_meta = entry["block_metadata"]
+            arrays = entry.get("arrays") or self._arrays_from_tensors_raw(
+                entry["tensors_raw"]
+            )
             cache_data = self._reconstruct_cache_data(
-                arrays, entry['file_metadata'],
-                entry['num_layers'], entry['layer_cache_types'],
+                arrays,
+                entry["file_metadata"],
+                entry["num_layers"],
+                entry["layer_cache_types"],
             )
             if cache_data is None:
                 return None, None
 
             metadata_dict = {
-                "num_layers": entry['num_layers'],
+                "num_layers": entry["num_layers"],
                 "token_count": blk_meta.token_count,
                 "model_name": blk_meta.model_name,
-                "layer_cache_types": entry['layer_cache_types'],
+                "layer_cache_types": entry["layer_cache_types"],
                 "layer_meta_states": blk_meta.layer_meta_states,
             }
 
@@ -1485,8 +1511,7 @@ class PagedSSDCacheManager(CacheManager):
             self._stats["hits"] += 1
             self._stats["hot_cache_hits"] += 1
             logger.debug(
-                f"Loaded block with metadata from hot cache: "
-                f"{block_hash.hex()[:16]}..."
+                f"Loaded block with metadata from hot cache: {block_hash.hex()[:16]}..."
             )
             return cache_data, metadata_dict
 
@@ -1511,16 +1536,21 @@ class PagedSSDCacheManager(CacheManager):
 
             # Parse layer_cache_types early for CacheList detection
             layer_cache_types = block_metadata.layer_cache_types
-            if not layer_cache_types and file_metadata and "layer_cache_types" in file_metadata:
+            if (
+                not layer_cache_types
+                and file_metadata
+                and "layer_cache_types" in file_metadata
+            ):
                 try:
-                    layer_cache_types = json.loads(
-                        file_metadata["layer_cache_types"]
-                    )
+                    layer_cache_types = json.loads(file_metadata["layer_cache_types"])
                 except (json.JSONDecodeError, TypeError):
                     layer_cache_types = None
 
             cache_data = self._reconstruct_cache_data(
-                arrays, file_metadata, block_metadata.num_layers, layer_cache_types,
+                arrays,
+                file_metadata,
+                block_metadata.num_layers,
+                layer_cache_types,
             )
             if cache_data is None:
                 return None, None
@@ -1643,10 +1673,7 @@ class PagedSSDCacheManager(CacheManager):
             return self._max_size
 
         now = time.monotonic()
-        if (
-            self._disk_usage_cache is None
-            or now - self._disk_usage_cache_time > 30.0
-        ):
+        if self._disk_usage_cache is None or now - self._disk_usage_cache_time > 30.0:
             try:
                 self._disk_usage_cache = shutil.disk_usage(self._cache_dir)
             except OSError as e:
@@ -1859,9 +1886,7 @@ class PagedSSDCacheManager(CacheManager):
                 "total_size": self._index.total_size,
                 "total_size_formatted": format_bytes(self._index.total_size),
                 "utilization": (
-                    self._index.total_size / effective_max
-                    if effective_max > 0
-                    else 0.0
+                    self._index.total_size / effective_max if effective_max > 0 else 0.0
                 ),
                 "num_files": self._index.count,
                 "hot_cache_entries": hot_entries,
@@ -1883,15 +1908,13 @@ class PagedSSDCacheManager(CacheManager):
             flushed = 0
             for block_hash, entry in entries_to_flush:
                 # Skip blocks already written to SSD
-                blk_meta = entry.get('block_metadata')
+                blk_meta = entry.get("block_metadata")
                 if blk_meta and blk_meta.file_path.exists():
                     continue
                 if self._enqueue_ssd_write(block_hash, entry):
                     flushed += 1
             if flushed:
-                logger.info(
-                    f"Flushed {flushed} hot cache blocks to SSD write queue"
-                )
+                logger.info(f"Flushed {flushed} hot cache blocks to SSD write queue")
 
         # Signal writer thread to stop (after processing remaining queue)
         if self._writer_thread:
@@ -2019,4 +2042,3 @@ class PagedSSDCacheManager(CacheManager):
             Configured maximum cache size in bytes.
         """
         return self._max_size
-
