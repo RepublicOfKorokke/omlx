@@ -386,10 +386,14 @@ class BlockAwarePrefixCache(CacheManager):
             layer_cache_types = [
                 # Prefer class_name for TurboQuant (cache_type maps to 'KVCache'),
                 # fall back to cache_type for all standard mlx-lm types.
-                layer_state.get("class_name", layer_state.get("cache_type", "KVCache"))
-                if layer_state.get("class_name", "")
-                in ("TurboQuantKVCache", "BatchTurboQuantKVCache")
-                else layer_state.get("cache_type", "KVCache")
+                (
+                    layer_state.get(
+                        "class_name", layer_state.get("cache_type", "KVCache")
+                    )
+                    if layer_state.get("class_name", "")
+                    in ("TurboQuantKVCache", "BatchTurboQuantKVCache")
+                    else layer_state.get("cache_type", "KVCache")
+                )
                 for layer_state in cache_data
             ]
             layer_meta_states = [
@@ -890,11 +894,9 @@ class BlockAwarePrefixCache(CacheManager):
                         )
                     )
                 elif cache_type_name == "RotatingKVCache":
-                    # RotatingKVCache: last-block-only or boundary-snapshot strategy
-                    has_valid_state = is_last_block or (
-                        snapshot_cache_data is not None
-                        and layer_idx < len(snapshot_cache_data)
-                    )
+                    # RotatingKVCache: Always store actual data for all blocks.
+                    # This enables walk-back during restore without boundary snapshots.
+                    has_valid_state = True
                     if has_valid_state:
                         # Use snapshot state if available, otherwise use main state
                         if (
@@ -996,15 +998,10 @@ class BlockAwarePrefixCache(CacheManager):
                             block_slices.append((mx.zeros((1,)), mx.zeros((1,))))
                 else:
                     # Other non-sliceable cache (ArraysCache/MambaCache)
-                    # GDN recurrent state summarizes the ENTIRE sequence in a
-                    # fixed-size matrix. Each block boundary snapshot captures
-                    # the state at that point in the sequence. Without a snapshot,
-                    # non-last blocks get a placeholder so partial matches are
-                    # detected and rejected during reconstruction.
-                    has_valid_state = is_last_block or (
-                        snapshot_cache_data is not None
-                        and layer_idx < len(snapshot_cache_data)
-                    )
+                    # GDN recurrent state summarizes the ENTIRE sequence.
+                    # Always store actual data for all blocks to enable walk-back
+                    # during restore without boundary snapshots.
+                    has_valid_state = True
                     if has_valid_state:
                         # Use snapshot state if available, otherwise main state
                         if (
@@ -2213,9 +2210,11 @@ class BlockAwarePrefixCache(CacheManager):
         return {
             "hits": self._hits,
             "misses": self._misses,
-            "hit_rate": self._hits / (self._hits + self._misses)
-            if (self._hits + self._misses) > 0
-            else 0,
+            "hit_rate": (
+                self._hits / (self._hits + self._misses)
+                if (self._hits + self._misses) > 0
+                else 0
+            ),
             "tokens_saved": self._tokens_saved,
             "partial_block_skips": self._partial_block_skips,
             "partial_tokens_skipped": self._partial_tokens_skipped,
