@@ -1103,7 +1103,9 @@ class PagedSSDCacheManager(CacheManager):
 
             # Materialize lazy arrays on the inference thread (Metal-safe).
             if arrays:
-                mx.eval(*arrays.values())  # noqa: S307 — MLX tensor eval, not Python eval
+                mx.eval(
+                    *arrays.values()
+                )  # noqa: S307 — MLX tensor eval, not Python eval
 
             # Extract raw bytes from evaluated tensors on the inference thread.
             # This is Metal-safe because it uses memoryview() on evaluated arrays.
@@ -1865,7 +1867,7 @@ class PagedSSDCacheManager(CacheManager):
                     if blk_meta is None or not _matches(blk_meta.model_name):
                         continue
                     hot_entries.append(entry)
-                    hot_size += self._hot_cache_entry_size(entry["tensors_raw"])
+                    hot_size += self._hot_cache_entry_size(entry)
 
             return PagedSSDCacheStats(
                 hits=self._stats["hits"],
