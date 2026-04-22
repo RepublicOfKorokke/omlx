@@ -993,15 +993,21 @@ class Scheduler:
 
         # Create logits processors for repetition/presence/frequency penalties
         logits_processors = make_logits_processors(
-            repetition_penalty=sampling_params.repetition_penalty
-            if sampling_params.repetition_penalty != 1.0
-            else None,
-            presence_penalty=sampling_params.presence_penalty
-            if sampling_params.presence_penalty != 0.0
-            else None,
-            frequency_penalty=sampling_params.frequency_penalty
-            if sampling_params.frequency_penalty != 0.0
-            else None,
+            repetition_penalty=(
+                sampling_params.repetition_penalty
+                if sampling_params.repetition_penalty != 1.0
+                else None
+            ),
+            presence_penalty=(
+                sampling_params.presence_penalty
+                if sampling_params.presence_penalty != 0.0
+                else None
+            ),
+            frequency_penalty=(
+                sampling_params.frequency_penalty
+                if sampling_params.frequency_penalty != 0.0
+                else None
+            ),
         )
 
         # Convert stop tokens from Set[int] to Sequence[Sequence[int]]
@@ -1196,8 +1202,7 @@ class Scheduler:
         # Boundary snapshot setup
         block_size = self.config.paged_cache_block_size
         boundary_enabled = (
-            not self.config.hot_cache_only
-            and block_size > 0
+            block_size > 0
             and self.block_aware_cache is not None
             and _prompt_cache_needs_snapshots(prompt_cache)
         )
@@ -1417,15 +1422,21 @@ class Scheduler:
             xtc_special_tokens=self._xtc_special_tokens,
         )
         logits_processors = make_logits_processors(
-            repetition_penalty=sampling_params.repetition_penalty
-            if sampling_params.repetition_penalty != 1.0
-            else None,
-            presence_penalty=sampling_params.presence_penalty
-            if sampling_params.presence_penalty != 0.0
-            else None,
-            frequency_penalty=sampling_params.frequency_penalty
-            if sampling_params.frequency_penalty != 0.0
-            else None,
+            repetition_penalty=(
+                sampling_params.repetition_penalty
+                if sampling_params.repetition_penalty != 1.0
+                else None
+            ),
+            presence_penalty=(
+                sampling_params.presence_penalty
+                if sampling_params.presence_penalty != 0.0
+                else None
+            ),
+            frequency_penalty=(
+                sampling_params.frequency_penalty
+                if sampling_params.frequency_penalty != 0.0
+                else None
+            ),
         )
 
         # Add thinking budget processor for reasoning models
@@ -2072,16 +2083,16 @@ class Scheduler:
         max_size. This method canonicalizes to the latest max_size tokens.
         """
         if not isinstance(state, (list, tuple)) or len(state) < 2:
-            return state, tuple(meta_state) if isinstance(
-                meta_state, (list, tuple)
-            ) else ()
+            return state, (
+                tuple(meta_state) if isinstance(meta_state, (list, tuple)) else ()
+            )
 
         keys = state[0]
         values = state[1]
         if keys is None or values is None or not hasattr(keys, "shape"):
-            return state, tuple(meta_state) if isinstance(
-                meta_state, (list, tuple)
-            ) else ()
+            return state, (
+                tuple(meta_state) if isinstance(meta_state, (list, tuple)) else ()
+            )
 
         try:
             keep = (
@@ -2105,9 +2116,9 @@ class Scheduler:
                 else int(getattr(layer_cache, "_idx", keys.shape[2]))
             )
         except Exception:
-            return state, tuple(meta_state) if isinstance(
-                meta_state, (list, tuple)
-            ) else ()
+            return state, (
+                tuple(meta_state) if isinstance(meta_state, (list, tuple)) else ()
+            )
 
         ordered_keys = keys
         ordered_values = values
@@ -3682,6 +3693,14 @@ class Scheduler:
                             # Immediately release _extracted_cache to free copy #1
                             # (store_cache already cloned to PagedCache blocks)
                             request._extracted_cache = None
+
+                            # Clear boundary snapshots for this request after store to prevent memory leak.
+                            # Boundary snapshots were needed for proper block storage but are no longer needed.
+                            if request_id in self._boundary_cache_snapshots:
+                                del self._boundary_cache_snapshots[request_id]
+                                logger.debug(
+                                    f"Cleared boundary snapshots for request {request_id}"
+                                )
                         except Exception as e:
                             logger.debug(
                                 f"Failed to store paged cache for {request_id}: {e}"
