@@ -5170,9 +5170,11 @@ class Scheduler:
                                 f"{len(request.prompt_token_ids)} prompt + "
                                 f"{len(request.output_token_ids)} output)"
                             )
-                            # Immediately release _extracted_cache to free copy #1
-                            # (store_cache already cloned to PagedCache blocks)
+                            # Immediately release _extracted_cache and prompt_cache.
+                            # The async worker holds cache_to_store (slice views),
+                            # which keep the parent Metal buffer alive until done.
                             request._extracted_cache = None
+                            request.prompt_cache = None
 
                             # Clear boundary snapshots for this request after store to prevent memory leak.
                             # Boundary snapshots were needed for proper block storage but are no longer needed.
@@ -5481,6 +5483,56 @@ class Scheduler:
                     output.outputs = outputs
                     output.finished_request_ids = finished_ids
                     self._cleanup_finished(finished_ids)
+
+                    # Log GPU memory after each turn for diagnostics.
+                    # Active = current allocations, cache = Metal pool reserve,
+                    # peak = high-water mark since last reset_peak_memory().
+                    if finished_ids and logger.isEnabledFor(logging.INFO):
+                        try:
+                            import mlx.core as mx
+
+                            active = mx.get_active_memory()
+                            cache = mx.get_cache_memory()
+                            peak = mx.get_peak_memory()
+                            finished_outputs = [o for o in outputs if o.finished]
+                            total_prompt = sum(
+                                o.prompt_tokens for o in finished_outputs
+                            )
+                            total_completion = sum(
+                                o.completion_tokens for o in finished_outputs
+                            )
+                            total_cached = sum(
+                                o.cached_tokens for o in finished_outputs
+                            )
+                            stale_pc = sum(
+                                1
+                                for r in self.requests.values()
+                                if r.prompt_cache is not None
+                            )
+                            hot_entries = 0
+                            hot_bytes = 0
+                            ssd_cache = (
+                                getattr(self.block_aware_cache, "paged_ssd_cache", None)
+                                if self.block_aware_cache is not None
+                                else None
+                            )
+                            if ssd_cache is not None:
+                                hot_entries = len(ssd_cache._hot_cache)
+                                hot_bytes = ssd_cache._hot_cache_total_bytes
+                            logger.info(
+                                "GPU memory after step: "
+                                f"active={active / 1024**3:.2f}GB, "
+                                f"cache={cache / 1024**3:.2f}GB, "
+                                f"peak={peak / 1024**3:.2f}GB, "
+                                f"finished={len(finished_ids)} req(s), "
+                                f"prompt_tokens={total_prompt}, "
+                                f"completion_tokens={total_completion}, "
+                                f"cached_tokens={total_cached}, "
+                                f"stale_pc={stale_pc}, "
+                                f"hot={hot_entries}entries/{hot_bytes / 1024**3:.2f}GB"
+                            )
+                        except Exception:
+                            pass
 
                     # Periodic Metal allocator cleanup during long decodes.
                     # mx.random.categorical inside the sampler allocates a

@@ -1337,11 +1337,20 @@ class PagedSSDCacheManager(CacheManager):
             }
 
             if self._hot_cache_only:
-                # Hot cache only mode: store mx.array directly (not tensors_raw).
-                # This avoids memory doubling on cache hit - we reuse the same
-                # GPU memory instead of creating new mx.array objects.
+                # Hot cache only mode: store independent copies of mx.array
+                # objects instead of slice views. Slice views pin the parent
+                # Metal buffer alive, causing memory to accumulate across
+                # multi-turn sessions (each turn's reconstructed + extended
+                # KV cache creates a new Metal buffer, and slices in the hot
+                # cache keep all old buffers alive).  mx.array(slc) creates a
+                # truly independent Metal allocation so old buffers can be
+                # freed when prompt_cache is released.
+                # NOTE: copy.copy uses MLX COW and does NOT break the reference.
+                array_copies = {}
+                for name, arr in arrays.items():
+                    array_copies[name] = mx.array(arr)
                 cache_entry = {
-                    "arrays": arrays,
+                    "arrays": array_copies,
                     "file_metadata": metadata,
                     "num_layers": len(cache_data),
                     "layer_cache_types": layer_cache_types,
